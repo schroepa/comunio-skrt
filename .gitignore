@@ -1,3 +1,8 @@
 .DS_Store
 node_modules/
 .env
+.superpowers/
+directus/.env
+directus/database/
+directus/uploads/
+directus/extensions/
