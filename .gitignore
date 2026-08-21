@@ -9,3 +9,4 @@ directus/uploads/
 directus/extensions/
 scraper/.env
 scraper/.cache/
+web/.env

@@ -1,0 +1,32 @@
+[
+  {
+    "spieltag": 1,
+    "heim_verein": "FC Bayern München",
+    "auswaerts_verein": "RB Leipzig",
+    "datum": "2026-08-22T13:30:00.000Z"
+  },
+  {
+    "spieltag": 1,
+    "heim_verein": "Bayer 04 Leverkusen",
+    "auswaerts_verein": "Eintracht Frankfurt",
+    "datum": "2026-08-22T16:30:00.000Z"
+  },
+  {
+    "spieltag": 2,
+    "heim_verein": "RB Leipzig",
+    "auswaerts_verein": "FC Bayern München",
+    "datum": "2026-08-29T13:30:00.000Z"
+  },
+  {
+    "spieltag": 2,
+    "heim_verein": "1. FC Union Berlin",
+    "auswaerts_verein": "SC Freiburg",
+    "datum": "2026-08-30T15:30:00.000Z"
+  },
+  {
+    "spieltag": 34,
+    "heim_verein": "VfB Stuttgart",
+    "auswaerts_verein": "Borussia Dortmund",
+    "datum": "2027-05-22T13:30:00.000Z"
+  }
+]
