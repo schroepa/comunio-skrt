@@ -10,11 +10,13 @@ export type HttpClientOptions = {
   cacheDir: string;
   ttlMs: number;
   minDelayMs: number;
-  userAgent: string;
+  userAgent?: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
 };
+
+const DEFAULT_USER_AGENT = "comunio-helper/0.1 (private)";
 
 function cachePath(cacheDir: string, url: string) {
   const hash = createHash("sha256").update(url).digest("hex");
@@ -27,7 +29,30 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? defaultSleep;
+  const userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
   let lastLiveAt = 0;
+  let liveQueue: Promise<unknown> = Promise.resolve();
+
+  async function liveFetch<T>(url: string, file: string): Promise<T> {
+    const wait = lastLiveAt + options.minDelayMs - now();
+    if (wait > 0) await sleep(wait);
+
+    const response = await fetchImpl(
+      new Request(url, {
+        headers: {
+          "User-Agent": userAgent,
+          Accept: "application/json",
+        },
+      }),
+    );
+    lastLiveAt = now();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} for ${url}`);
+    }
+    const body = (await response.json()) as T;
+    await writeFile(file, JSON.stringify({ storedAt: now(), body }), "utf8");
+    return body;
+  }
 
   return {
     async getJson<T>(url: string): Promise<T> {
@@ -45,24 +70,9 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
         }
       }
 
-      const wait = lastLiveAt + options.minDelayMs - now();
-      if (wait > 0) await sleep(wait);
-
-      const response = await fetchImpl(
-        new Request(url, {
-          headers: {
-            "User-Agent": options.userAgent,
-            Accept: "application/json",
-          },
-        }),
-      );
-      lastLiveAt = now();
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status} for ${url}`);
-      }
-      const body = (await response.json()) as T;
-      await writeFile(file, JSON.stringify({ storedAt: now(), body }), "utf8");
-      return body;
+      const result = liveQueue.then(() => liveFetch<T>(url, file));
+      liveQueue = result.catch(() => undefined);
+      return result;
     },
   };
 }

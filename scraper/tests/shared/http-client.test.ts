@@ -111,6 +111,47 @@ describe("createHttpClient", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("uses default User-Agent when userAgent is omitted", async () => {
+    await setup();
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    const client = createHttpClient({
+      cacheDir: dir,
+      ttlMs: 60_000,
+      minDelayMs: 0,
+      fetchImpl,
+      now: () => 1_000,
+    });
+
+    await client.getJson("https://example.test/data");
+    const request = fetchImpl.mock.calls[0][0] as Request;
+    expect(request.headers.get("User-Agent")).toBe("comunio-helper/0.1 (private)");
+  });
+
+  it("serializes concurrent live requests to respect minDelayMs", async () => {
+    await setup();
+    const sleep = vi.fn(async () => undefined);
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }));
+    let now = 10_000;
+    const client = createHttpClient({
+      cacheDir: dir,
+      ttlMs: 0,
+      minDelayMs: 250,
+      userAgent: "test-agent",
+      fetchImpl,
+      now: () => now,
+      sleep,
+    });
+
+    await Promise.all([
+      client.getJson("https://example.test/a"),
+      client.getJson("https://example.test/b"),
+    ]);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(250);
+  });
+
   it("waits minDelayMs between live requests", async () => {
     await setup();
     const sleep = vi.fn(async () => undefined);
