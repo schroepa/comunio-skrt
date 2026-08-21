@@ -41,12 +41,12 @@ Wenn der Account „bereit“ ist:
 1. **Compute → Instances → Create instance**
 2. Name z. B. `comunio-directus`
 3. Image: **Ubuntu 24.04** (Minimal reicht)
-4. Shape: **VM.Standard.A1.Flex** (Ampere), **1 OCPU**, **6 GB RAM** — nicht die x86-Mikroinstanz
+4. Shape: nicht bei `VM.Standard.E2.1.Micro` (AMD, 1 GB) bleiben. **Change shape** → Processor **Ampere** → **VM.Standard.A1.Flex**, **1 OCPU**, **6 GB RAM**. Das ist ebenfalls Always Free (Kontingent: bis 4 OCPU / 24 GB in der Tenancy). Der Wizard zeigt zuerst die AMD-Mikroinstanz, weil die „einfach“ ist, nicht weil Ampere kostenpflichtig wäre.
 5. SSH-Key hochladen (dein `id_ed25519.pub`)
 6. Boot volume: 50 GB reicht
 7. Öffentliche IPv4 behalten
 
-Falls Ampere in der Availability Domain aus ist: andere Domain in derselben Region, oder kurz warten. Always-Free-Kapazität ist regional begrenzt.
+Ampere grau / „out of capacity“: andere Availability Domain in derselben Region, oder später nochmal. **Nicht** mit der 1-GB-Mikroinstanz weitermachen — Directus + Docker + Caddy passen da nicht zuverlässig (Out-of-Memory). Eine zweite Always-Free-Mikroinstanz hilft auch nicht, SQLite läuft auf einer Maschine.
 
 ### 2. Ports
 
