@@ -1,6 +1,16 @@
 ---
 import Shell from "../layouts/Shell.astro";
+import EmptyState from "../components/EmptyState.astro";
+import { Badge } from "../components/ui/badge.tsx";
 ---
 <Shell title="Kader-Check vor Spieltag-Deadline">
   <h1 class="font-[Syne] text-3xl">Kader-Check vor Spieltag-Deadline</h1>
+  <p class="text-sm text-muted-foreground">
+    Später: <Badge variant="destructive">Startet nicht</Badge>
+    bei Verletzung oder Sperre,
+    <Badge className="bg-amber-500/20 text-amber-200">Unsicher, prüfen</Badge>
+    / <Badge className="bg-amber-500/20 text-amber-200">Wenig Spielzeit zuletzt</Badge>. Keine Dummy-Warnungen.
+  </p>
+  <ul aria-label="Kader-Warnungen" class="mt-4"></ul>
+  <EmptyState body="Sobald Spieler im Kader und Verfügbarkeit gepflegt sind, erscheinen Warnungen hier." />
 </Shell>

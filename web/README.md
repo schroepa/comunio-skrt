@@ -1,43 +1,20 @@
-# Astro Starter Kit: Minimal
+# Comunio Assistant — Web
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Astro-UI für Dashboard, Spieler-Radar (Stub) und Kader-Check (Stub). Spielplan kommt aus Directus-`Fixture` (OpenLigaDB, ODbL).
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Voraussetzung
 
-## 🚀 Project Structure
+Directus lokal: in `directus/` `docker compose up -d` (siehe `directus/README.md`). Spielplan füllen: in `scraper/` `npm run sync:openligadb`.
 
-Inside of your Astro project, you'll see the following folders and files:
+## Start
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+1. Static Token in Directus anlegen (Settings → Access Tokens), Rechte auf `Fixture` lesen.
+2. `cp .env.example .env` und `DIRECTUS_TOKEN` setzen.
+3. `npm install`
+4. `npm run dev` → http://localhost:4321
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Ohne Token startet die App trotzdem; Deadline und Spielplan zeigen den Hinweis, `DIRECTUS_TOKEN` in `web/.env` zu setzen.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Tests
 
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+`npm test` — Ableitung und Directus-Client gegen Fixtures/Mocks, kein Live-Directus.
