@@ -9,7 +9,8 @@
     "test": "npm run typecheck && vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts"
+    "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts",
+    "sync:transfermarkt": "tsx --env-file=.env src/transfermarkt/run.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
