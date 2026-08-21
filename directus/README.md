@@ -16,6 +16,8 @@ docker compose up -d
 docker compose exec directus npx directus schema apply --yes ./schema/snapshot.yaml
 ```
 
+Nach einem `git pull` dasselbe `schema apply --yes` ausführen, damit neue Felder (z. B. `Player.transfermarkt_id`) in der laufenden Instanz ankommen.
+
 ## Collections
 
 `Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus`, `SquadMembership` (siehe `../CLAUDE.md`), plus `ScrapeLog` (siehe `../docs/spec-datenpipeline.md`, Abschnitt „Architektur").
