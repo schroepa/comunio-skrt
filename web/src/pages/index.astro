@@ -1,6 +1,89 @@
 ---
+import { DIRECTUS_TOKEN, DIRECTUS_URL } from "astro:env/server";
+import DeadlineCountdown from "../components/DeadlineCountdown";
+import EmptyState from "../components/EmptyState.astro";
+import MatchList from "../components/MatchList.astro";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { listFixtures } from "../lib/directus";
+import { getNextMatchday } from "../lib/fixtures";
 import Shell from "../layouts/Shell.astro";
+
+const load = await listFixtures({
+  url: DIRECTUS_URL,
+  token: DIRECTUS_TOKEN ?? "",
+});
+
+const scheduleError =
+  !load.ok && load.reason === "missing_token"
+    ? "`DIRECTUS_TOKEN` in `web/.env` setzen."
+    : !load.ok
+      ? "Directus nicht erreichbar. In `directus/` `docker compose up -d`."
+      : load.ok && load.fixtures.length === 0
+        ? "Noch kein Spielplan. Im Ordner `scraper/` `npm run sync:openligadb`."
+        : null;
+
+const matchday =
+  load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, new Date()) : null;
+
+const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === false;
 ---
 <Shell title="Dashboard">
   <h1 class="font-[Syne] text-3xl">Dashboard</h1>
+
+  <div class="grid gap-4 md:grid-cols-3">
+    <Card>
+      <CardHeader>
+        <CardTitle>Budget übrig</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <EmptyState body="Noch keine Kadereingabe" />
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Kaderwert</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <EmptyState body="Noch keine Kadereingabe" />
+      </CardContent>
+    </Card>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Nächste Deadline</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {scheduleError ? (
+          <EmptyState body={scheduleError} />
+        ) : matchday?.seasonOver ? (
+          <p>Saison vorbei</p>
+        ) : showCountdown && matchday?.deadline ? (
+          <DeadlineCountdown client:load deadlineIso={matchday.deadline.toISOString()} />
+        ) : (
+          scheduleError && <EmptyState body={scheduleError} />
+        )}
+      </CardContent>
+    </Card>
+  </div>
+
+  {scheduleError ? (
+    <section class="space-y-3">
+      <h2 class="font-[Syne] text-xl">Nächste Spiele</h2>
+      <EmptyState body={scheduleError} />
+    </section>
+  ) : matchday ? (
+    <MatchList spieltag={matchday.spieltag} fixtures={matchday.fixtures} />
+  ) : null}
+
+  <section class="space-y-3">
+    <h2 class="font-[Syne] text-xl">Kader-Check</h2>
+    <EmptyState body="Sobald Spieler im Kader und Verfügbarkeit gepflegt sind, erscheinen Warnungen hier." />
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="font-[Syne] text-xl">Top-Signale</h2>
+    <EmptyState body="Kauf-/Verkaufssignale brauchen Noten und Marktwerte." />
+    <a href="/radar">Zum Spieler-Radar</a>
+  </section>
 </Shell>
