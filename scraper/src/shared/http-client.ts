@@ -37,15 +37,19 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
     const wait = lastLiveAt + options.minDelayMs - now();
     if (wait > 0) await sleep(wait);
 
-    const response = await fetchImpl(
-      new Request(url, {
-        headers: {
-          "User-Agent": userAgent,
-          Accept: "application/json",
-        },
-      }),
-    );
-    lastLiveAt = now();
+    let response: Response;
+    try {
+      response = await fetchImpl(
+        new Request(url, {
+          headers: {
+            "User-Agent": userAgent,
+            Accept: "application/json",
+          },
+        }),
+      );
+    } finally {
+      lastLiveAt = now();
+    }
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} for ${url}`);
     }

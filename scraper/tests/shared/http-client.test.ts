@@ -22,7 +22,7 @@ describe("createHttpClient", () => {
 
   it("fetches JSON on cache miss and writes the cache file", async () => {
     await setup();
-    const fetchImpl = vi.fn(async () =>
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -113,7 +113,7 @@ describe("createHttpClient", () => {
 
   it("uses default User-Agent when userAgent is omitted", async () => {
     await setup();
-    const fetchImpl = vi.fn(async () =>
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     );
     const client = createHttpClient({
@@ -170,6 +170,31 @@ describe("createHttpClient", () => {
     await client.getJson("https://example.test/a");
     now = 10_100;
     await client.getJson("https://example.test/b");
+    expect(sleep).toHaveBeenCalledWith(150);
+  });
+
+  it("waits minDelayMs after a rejected live fetch", async () => {
+    await setup();
+    const sleep = vi.fn(async () => undefined);
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+    let now = 10_000;
+    const client = createHttpClient({
+      cacheDir: dir,
+      ttlMs: 0,
+      minDelayMs: 250,
+      userAgent: "test-agent",
+      fetchImpl,
+      now: () => now,
+      sleep,
+    });
+
+    await expect(client.getJson("https://example.test/a")).rejects.toThrow("network down");
+    now = 10_100;
+    await client.getJson("https://example.test/b");
+
     expect(sleep).toHaveBeenCalledWith(150);
   });
 });

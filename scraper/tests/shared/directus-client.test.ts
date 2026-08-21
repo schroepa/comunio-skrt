@@ -93,7 +93,26 @@ describe("createDirectusClient", () => {
       password: "bad",
       fetchImpl,
     });
-    await expect(client.login()).rejects.toThrow(/401/);
+    await expect(client.login()).rejects.toThrow(
+      "Directus HTTP 401 for POST /auth/login: Invalid",
+    );
+  });
+
+  it("truncates long Directus error messages", async () => {
+    const longMessage = "x".repeat(250);
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ errors: [{ message: longMessage }] }, 500),
+    );
+    const client = createDirectusClient({
+      baseUrl: "http://localhost:8055",
+      email: "a@b.dev",
+      password: "bad",
+      fetchImpl,
+    });
+
+    await expect(client.login()).rejects.toThrow(
+      `Directus HTTP 500 for POST /auth/login: ${"x".repeat(200)}…`,
+    );
   });
 });
 

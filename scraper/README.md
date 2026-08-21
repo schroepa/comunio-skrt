@@ -24,6 +24,8 @@ npm run sync:openligadb
 
 Default: Liga `bl1`, Saison `2026` (Saison 2026/27). Überschreiben über `OPENLIGADB_LEAGUE` / `OPENLIGADB_SEASON` in `.env`.
 
+`Fixture` enthält immer genau eine Saison. Vor einem Saisonwechsel muss die Collection vollständig geleert werden; andernfalls werden Spiele verschiedener Saisons vermischt. Insbesondere darf der in Task 5 verwendete Fallback `OPENLIGADB_SEASON=2025` nicht gegen eine bereits mit Saison 2026 befüllte `Fixture`-Collection laufen.
+
 Danach im Directus-Admin (http://localhost:8055): Collection `Fixture` (≈306 Zeilen) und `ScrapeLog` (ein `success`-Eintrag mit `quelle=openligadb`) stichprobenartig prüfen.
 
 Rohantworten liegen unter `.cache/` (TTL 12 Stunden) und werden nicht versioniert.

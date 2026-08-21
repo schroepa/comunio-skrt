@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { syncOpenLigaDb } from "../../src/openligadb/sync.ts";
 import type { DirectusClient } from "../../src/shared/directus-client.ts";
 import type { HttpClient } from "../../src/shared/http-client.ts";
@@ -25,10 +25,12 @@ function mockDirectus() {
   const created: object[] = [];
   const updated: { id: number; payload: object }[] = [];
   const logs: object[] = [];
+  const listCalls: { collection: string; query?: Record<string, string> }[] = [];
   const existing: { id: number; spieltag: number; heim_verein: string; auswaerts_verein: string; datum: string }[] = [];
   const client: DirectusClient = {
     async login() {},
-    async listItems(collection) {
+    async listItems(collection, query) {
+      listCalls.push({ collection, query });
       if (collection === "Fixture") return existing as never;
       return [];
     },
@@ -45,15 +47,26 @@ function mockDirectus() {
       return { id, ...payload } as never;
     },
   };
-  return { client, created, updated, logs, existing };
+  return { client, created, updated, logs, existing, listCalls };
+}
+
+function mockHttpJson(body: unknown) {
+  const urls: string[] = [];
+  const client: HttpClient = {
+    async getJson<T>(url: string): Promise<T> {
+      urls.push(url);
+      return body as T;
+    },
+  };
+  return { client, urls };
 }
 
 describe("syncOpenLigaDb", () => {
   it("creates fixtures and writes a success ScrapeLog", async () => {
-    const { client, created, logs } = mockDirectus();
-    const http: HttpClient = { getJson: async () => seasonPayload() };
+    const { client, created, logs, listCalls } = mockDirectus();
+    const http = mockHttpJson(seasonPayload());
     const result = await syncOpenLigaDb({
-      http,
+      http: http.client,
       directus: client,
       league: "bl1",
       season: 2025,
@@ -63,6 +76,8 @@ describe("syncOpenLigaDb", () => {
     expect(logs).toEqual([
       expect.objectContaining({ quelle: "openligadb", status: "success", fehlermeldung: null }),
     ]);
+    expect(http.urls).toEqual(["https://api.openligadb.de/getmatchdata/bl1/2025"]);
+    expect(listCalls).toContainEqual({ collection: "Fixture", query: { limit: "-1" } });
   });
 
   it("updates an existing fixture instead of duplicating it", async () => {
@@ -74,8 +89,8 @@ describe("syncOpenLigaDb", () => {
       auswaerts_verein: "Auswaerts-1-0",
       datum: "2025-08-01T15:30:00",
     });
-    const http: HttpClient = { getJson: async () => seasonPayload() };
-    await syncOpenLigaDb({ http, directus: client, league: "bl1", season: 2025 });
+    const http = mockHttpJson(seasonPayload());
+    await syncOpenLigaDb({ http: http.client, directus: client, league: "bl1", season: 2025 });
     expect(updated).toContainEqual({
       id: 42,
       payload: {
@@ -91,7 +106,7 @@ describe("syncOpenLigaDb", () => {
   it("does not write fixtures when HTTP fails, but logs failed", async () => {
     const { client, created, logs } = mockDirectus();
     const http: HttpClient = {
-      getJson: async () => {
+      async getJson<T>(): Promise<T> {
         throw new Error("HTTP 403 for https://api.openligadb.de/getmatchdata/bl1/2025");
       },
     };
@@ -111,11 +126,9 @@ describe("syncOpenLigaDb", () => {
 
   it("does not write fixtures when plausibility fails", async () => {
     const { client, created, logs } = mockDirectus();
-    const http: HttpClient = {
-      getJson: async () => seasonPayload(9),
-    };
+    const http = mockHttpJson(seasonPayload(9));
     const result = await syncOpenLigaDb({
-      http,
+      http: http.client,
       directus: client,
       league: "bl1",
       season: 2025,

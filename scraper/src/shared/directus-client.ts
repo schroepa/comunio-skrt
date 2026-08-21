@@ -12,6 +12,21 @@ export type DirectusClientOptions = {
   fetchImpl?: typeof fetch;
 };
 
+const MAX_DIRECTUS_ERROR_MESSAGE_LENGTH = 200;
+
+async function readDirectusError(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as { errors?: Array<{ message?: unknown }> };
+    const message = body.errors?.[0]?.message;
+    if (typeof message !== "string" || message.length === 0) return null;
+    return message.length > MAX_DIRECTUS_ERROR_MESSAGE_LENGTH
+      ? `${message.slice(0, MAX_DIRECTUS_ERROR_MESSAGE_LENGTH)}…`
+      : message;
+  } catch {
+    return null;
+  }
+}
+
 export function createDirectusClient(options: DirectusClientOptions): DirectusClient {
   const fetchImpl = options.fetchImpl ?? fetch;
   const baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -25,7 +40,11 @@ export function createDirectusClient(options: DirectusClientOptions): DirectusCl
     if (token) headers.Authorization = `Bearer ${token}`;
     const response = await fetchImpl(`${baseUrl}${path}`, { ...init, headers });
     if (!response.ok) {
-      throw new Error(`Directus HTTP ${response.status} for ${init.method ?? "GET"} ${path}`);
+      const directusMessage = await readDirectusError(response);
+      const detail = directusMessage ? `: ${directusMessage}` : "";
+      throw new Error(
+        `Directus HTTP ${response.status} for ${init.method ?? "GET"} ${path}${detail}`,
+      );
     }
     return response.json() as Promise<{ data: unknown }>;
   }

@@ -4,8 +4,9 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "test": "vitest run",
+    "test": "npm run typecheck && vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts"
   },
   "devDependencies": {
