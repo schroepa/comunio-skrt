@@ -7,3 +7,5 @@ directus/.env
 directus/database/
 directus/uploads/
 directus/extensions/
+scraper/.env
+scraper/.cache/
