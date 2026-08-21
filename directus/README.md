@@ -13,7 +13,7 @@ Lokales Directus-Backend (SQLite) für den Comunio Assistant. Siehe `../docs/spe
 Nach frischem Checkout und leerer Datenbank:
 ```bash
 docker compose up -d
-docker compose exec directus npx directus schema apply ./schema/snapshot.yaml
+docker compose exec directus npx directus schema apply --yes ./schema/snapshot.yaml
 ```
 
 ## Collections
