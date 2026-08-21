@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts",
-    "sync:transfermarkt": "tsx --env-file=.env src/transfermarkt/run.ts"
+    "sync:transfermarkt": "tsx --env-file=.env src/transfermarkt/run.ts",
+    "sync:kicker": "tsx --env-file=.env src/kicker/run.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -1,0 +1,133 @@
+---
+import { DIRECTUS_URL } from "astro:env/server";
+import EmptyState from "../components/EmptyState.astro";
+import {
+  addToSquad,
+  getManagerProfile,
+  listPlayers,
+  listSquad,
+  removeFromSquad,
+  saveBudget,
+} from "../lib/directus";
+import Shell from "../layouts/Shell.astro";
+
+const { user, accessToken } = Astro.locals;
+const query = Astro.url.searchParams.get("q") ?? "";
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const action = String(form.get("action") ?? "");
+  if (action === "add") {
+    await addToSquad({
+      url: DIRECTUS_URL,
+      token: accessToken,
+      userId: user.id,
+      playerId: Number(form.get("player_id")),
+    });
+  }
+  if (action === "remove") {
+    await removeFromSquad({
+      url: DIRECTUS_URL,
+      token: accessToken,
+      membershipId: Number(form.get("membership_id")),
+    });
+  }
+  if (action === "budget") {
+    const profile = await getManagerProfile({ url: DIRECTUS_URL, token: accessToken, userId: user.id });
+    await saveBudget({
+      url: DIRECTUS_URL,
+      token: accessToken,
+      userId: user.id,
+      budget: Number(form.get("budget")),
+      profileId: profile?.id,
+    });
+  }
+  return Astro.redirect("/kader");
+}
+
+const [squad, players, profile, searchHits] = await Promise.all([
+  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
+  getManagerProfile({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  query ? listPlayers({ url: DIRECTUS_URL, token: accessToken, search: query }) : Promise.resolve([]),
+]);
+
+const byId = new Map(players.map((player) => [player.id, player]));
+const squadPlayers = squad
+  .map((row) => {
+    const player = byId.get(row.player_id);
+    return player ? { ...player, membershipId: row.id } : null;
+  })
+  .filter((row) => row !== null);
+const inSquad = new Set(squad.map((row) => row.player_id));
+const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
+---
+<Shell title="Mein Kader" userEmail={user.email}>
+  <h1 class="font-[Syne] text-3xl">Mein Kader</h1>
+
+  <form method="post" class="flex flex-wrap items-end gap-3">
+    <input type="hidden" name="action" value="budget" />
+    <label class="text-sm">
+      Budget (Comunio)
+      <input class="mt-1 block rounded-md border border-border bg-card px-3 py-2" type="number" name="budget" min="0" value={profile?.budget ?? ""} />
+    </label>
+    <button class="rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Speichern</button>
+  </form>
+
+  {squadPlayers.length === 0 ? (
+    <EmptyState body="Noch keine Kadereingabe. Spieler über die Suche hinzufügen." />
+  ) : (
+    <div class="space-y-6">
+      {positions.map((position) => {
+        const group = squadPlayers.filter((player) => player.position === position);
+        if (group.length === 0) return null;
+        return (
+          <section>
+            <h2 class="font-[Syne] text-xl">{position}</h2>
+            <ul class="mt-2 divide-y divide-border">
+              {group.map((player) => (
+                <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span>
+                    {player.name}
+                    <span class="ml-2 text-muted-foreground">{player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
+                  </span>
+                  <form method="post">
+                    <input type="hidden" name="action" value="remove" />
+                    <input type="hidden" name="membership_id" value={player.membershipId} />
+                    <button class="text-destructive underline" type="submit">Entfernen</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  )}
+
+  <section class="space-y-3">
+    <h2 class="font-[Syne] text-xl">Spieler suchen</h2>
+    <form method="get" class="flex gap-2">
+      <input class="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm" type="search" name="q" value={query} placeholder="Name" />
+      <button class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Suchen</button>
+    </form>
+    {query && searchHits.length === 0 ? <p class="text-sm text-muted-foreground">Kein Treffer.</p> : null}
+    <ul class="divide-y divide-border">
+      {searchHits.map((player) => (
+        <li class="flex items-center justify-between gap-3 py-2 text-sm">
+          <span>
+            {player.name}
+            <span class="ml-2 text-muted-foreground">{player.position} · {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
+          </span>
+          <form method="post">
+            <input type="hidden" name="action" value="add" />
+            <input type="hidden" name="player_id" value={player.id} />
+            <button class="underline" type="submit" disabled={inSquad.has(player.id)}>
+              {inSquad.has(player.id) ? "Im Kader" : "In den Kader"}
+            </button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Shell>

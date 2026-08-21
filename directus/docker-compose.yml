@@ -15,4 +15,4 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       DB_CLIENT: "sqlite3"
       DB_FILENAME: "/directus/database/data.db"
-      PUBLIC_URL: "http://localhost:8055/"
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8055/}

@@ -3,8 +3,11 @@ import { Liquid } from "liquid-gooey";
 
 const links = [
   { href: "/", label: "Dashboard" },
+  { href: "/kader", label: "Kader" },
   { href: "/radar", label: "Radar" },
   { href: "/kader-check", label: "Kader-Check" },
+  { href: "/konkurrenz", label: "Konkurrenz" },
+  { href: "/aufstellung", label: "Aufstellung" },
 ] as const;
 
 function currentPathname(): string {
@@ -78,7 +81,7 @@ export default function Nav() {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className="relative z-10 whitespace-nowrap rounded-full bg-transparent px-4 py-2 text-sm no-underline transition-colors"
+              className="relative z-10 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 text-xs no-underline transition-colors sm:px-3 sm:text-sm"
               style={{
                 color: active ? "var(--primary-foreground)" : "var(--foreground)",
                 fontWeight: active ? 600 : 400,

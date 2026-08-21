@@ -1,33 +1,65 @@
 ---
-import { DIRECTUS_TOKEN, DIRECTUS_URL } from "astro:env/server";
+import { DIRECTUS_URL } from "astro:env/server";
 import DeadlineCountdown from "../components/DeadlineCountdown";
 import EmptyState from "../components/EmptyState.astro";
 import MatchList from "../components/MatchList.astro";
+import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { listFixtures } from "../lib/directus";
+import { kaderAlerts, radarRows } from "../lib/catalog";
+import {
+  listAvailability,
+  listFixtures,
+  listPlayers,
+  listRatings,
+  listSquad,
+  getManagerProfile,
+} from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
+import { budgetRemaining, squadValue } from "../lib/money";
 import Shell from "../layouts/Shell.astro";
 
-const load = await listFixtures({
-  url: DIRECTUS_URL,
-  token: DIRECTUS_TOKEN ?? "",
-});
+const { user, accessToken } = Astro.locals;
+const now = new Date();
+
+const [load, players, squad, ratings, profile] = await Promise.all([
+  listFixtures({ url: DIRECTUS_URL, token: accessToken }),
+  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
+  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  listRatings({ url: DIRECTUS_URL, token: accessToken }),
+  getManagerProfile({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+]);
 
 const scheduleError =
-  !load.ok && load.reason === "missing_token"
-    ? "`DIRECTUS_TOKEN` in `web/.env` setzen."
-    : !load.ok
-      ? "Directus nicht erreichbar. In `directus/` `docker compose up -d`."
-      : load.ok && load.fixtures.length === 0
-        ? "Noch kein Spielplan. Im Ordner `scraper/` `npm run sync:openligadb`."
-        : null;
+  !load.ok
+    ? "Directus nicht erreichbar. In `directus/` `docker compose up -d`."
+    : load.ok && load.fixtures.length === 0
+      ? "Noch kein Spielplan. Im Ordner `scraper/` `npm run sync:openligadb`."
+      : null;
 
-const matchday =
-  load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, new Date()) : null;
-
+const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, now) : null;
 const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === false;
+const spieltag = matchday?.spieltag ?? 1;
+const availability = load.ok
+  ? await listAvailability({ url: DIRECTUS_URL, token: accessToken, spieltag })
+  : [];
+
+const playerById = new Map(players.map((player) => [player.id, player]));
+const values = squad
+  .map((row) => playerById.get(row.player_id)?.aktueller_marktwert)
+  .filter((value): value is number => typeof value === "number");
+const value = squadValue(values);
+const remaining = budgetRemaining(profile?.budget, value);
+const alerts = kaderAlerts(squad, players, availability, ratings, spieltag);
+const signals = radarRows(
+  players,
+  new Set(squad.map((row) => row.player_id)),
+  ratings,
+  availability,
+  load.ok ? load.fixtures : [],
+  spieltag,
+).filter((row) => row.badge === "Kaufen" || row.badge === "Verkaufen");
 ---
-<Shell title="Dashboard">
+<Shell title="Dashboard" userEmail={user.email}>
   <h1 class="font-[Syne] text-3xl">Dashboard</h1>
 
   <div class="grid gap-4 md:grid-cols-3">
@@ -36,7 +68,11 @@ const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === fa
         <CardTitle>Budget übrig</CardTitle>
       </CardHeader>
       <CardContent>
-        <EmptyState body="Noch keine Kadereingabe" />
+        {remaining == null ? (
+          <EmptyState body="Noch keine Kadereingabe" />
+        ) : (
+          <p class="text-2xl tabular-nums">{remaining.toLocaleString("de-DE")} €</p>
+        )}
       </CardContent>
     </Card>
 
@@ -45,7 +81,11 @@ const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === fa
         <CardTitle>Kaderwert</CardTitle>
       </CardHeader>
       <CardContent>
-        <EmptyState body="Noch keine Kadereingabe" />
+        {squad.length === 0 ? (
+          <EmptyState body="Noch keine Kadereingabe" />
+        ) : (
+          <p class="text-2xl tabular-nums">{value.toLocaleString("de-DE")} €</p>
+        )}
       </CardContent>
     </Card>
 
@@ -78,12 +118,39 @@ const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === fa
 
   <section class="space-y-3">
     <h2 class="font-[Syne] text-xl">Kader-Check</h2>
-    <EmptyState body="Sobald Spieler im Kader und Verfügbarkeit gepflegt sind, erscheinen Warnungen hier." />
+    {alerts.length === 0 ? (
+      <EmptyState body="Sobald Spieler im Kader und Verfügbarkeit gepflegt sind, erscheinen Warnungen hier." />
+    ) : (
+      <ul class="space-y-2">
+        {alerts.slice(0, 5).map((alert) => (
+          <li class="flex items-center justify-between gap-3 text-sm">
+            <span>{alert.player}</span>
+            {alert.tone === "block" ? (
+              <Badge variant="destructive">{alert.badge}</Badge>
+            ) : (
+              <Badge className="bg-amber-500/20 text-amber-200">{alert.badge}</Badge>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+    <a href="/kader-check">Zum Kader-Check</a>
   </section>
 
   <section class="space-y-3">
     <h2 class="font-[Syne] text-xl">Top-Signale</h2>
-    <EmptyState body="Kauf-/Verkaufssignale brauchen Noten und Marktwerte." />
+    {signals.length === 0 ? (
+      <EmptyState body="Kauf-/Verkaufssignale brauchen Noten und Marktwerte." />
+    ) : (
+      <ul class="space-y-2">
+        {signals.slice(0, 3).map((row) => (
+          <li class="text-sm">
+            {row.player.name} · {row.badge}
+            <span class="block text-muted-foreground">{row.reason}</span>
+          </li>
+        ))}
+      </ul>
+    )}
     <a href="/radar">Zum Spieler-Radar</a>
   </section>
 </Shell>

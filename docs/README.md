@@ -2,16 +2,19 @@
 
 Produkt-Specs liegen hier im Repo, nicht im Wiki. Implementierungspläne und Design-Entscheidungen unter `superpowers/`.
 
-## Produkt (V1)
+## Produkt
 
 | Spec | Thema | Status |
 |---|---|---|
-| [spec-datenpipeline.md](spec-datenpipeline.md) | Quellen, Directus, Scraper-Phasen, CSV-Fallback | Phase 1–3 gebaut (Schema, OpenLigaDB, Transfermarkt). Kicker, Cron, CSV folgen |
-| [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert, Filter, Badges | Spec fertig, UI noch Stub |
-| [spec-kader-check.md](spec-kader-check.md) | Warnungen vor der Deadline (verletzt/gesperrt/Rotation) | Spec fertig, UI noch Stub |
-| [spec-dashboard.md](spec-dashboard.md) | Budget, Deadline, Alerts, Top-Signale | Shell + Spielplan/Deadline; Rest Leerzustände |
+| [spec-datenpipeline.md](spec-datenpipeline.md) | Quellen, Directus, Scraper-Phasen, CSV-Fallback | Phase 1–4 gebaut (Schema, OpenLigaDB, Transfermarkt, Kicker-CLI). Cron/CSV folgen |
+| [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert | Radar-UI + Formscore |
+| [spec-kader-check.md](spec-kader-check.md) | Warnungen vor der Deadline | auf User-Kader |
+| [spec-dashboard.md](spec-dashboard.md) | Budget, Deadline, Alerts, Top-Signale | mit Login und Kaderwert |
+| [spec-konkurrenzvergleich.md](spec-konkurrenzvergleich.md) | Rivalen der eigenen Liga (leicht) | `/konkurrenz` |
+| [spec-aufstellung.md](spec-aufstellung.md) | Elf aus dem Kader | `/aufstellung` |
+| [spec-punkteprognose.md](spec-punkteprognose.md) | erwartete Punkte | Engine + Aufstellung |
 
-Geplant, Datei noch nicht im Repo: `spec-konkurrenzvergleich.md` (V1.5/V2), `spec-aufstellung.md` (V2), `spec-punkteprognose.md` (V2).
+Auth/Hosting: [Freundes-Runde P0+P1, Design](superpowers/specs/2026-08-21-freundesrunde-auth-kader-design.md).
 
 ## Betrieb
 
@@ -23,8 +26,9 @@ Geplant, Datei noch nicht im Repo: `spec-konkurrenzvergleich.md` (V1.5/V2), `spe
 
 ## Design- und Baupläne
 
-Ausführliche SDD-Artefakte (nicht die Produkt-Specs):
-
+- [Freundes-Runde P0+P1, Design](superpowers/specs/2026-08-21-freundesrunde-auth-kader-design.md)
+- [Freundes-Runde P0+P1, Plan](superpowers/plans/2026-08-21-freundesrunde-auth-kader.md)
+- [Kicker/Radar/Kader-Check, Design](superpowers/specs/2026-08-21-kicker-radar-kadercheck-design.md)
 - [Frontend-Dashboard-Shell, Design](superpowers/specs/2026-08-21-frontend-dashboard-shell-design.md)
 - [Frontend-Dashboard-Shell, Plan](superpowers/plans/2026-08-21-frontend-dashboard-shell.md)
 - [Datenpipeline Phase 1](superpowers/plans/2026-08-20-datenpipeline-phase1-fundament.md)

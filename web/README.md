@@ -1,20 +1,23 @@
 # Comunio Assistant — Web
 
-Astro-UI für Dashboard, Spieler-Radar (Stub) und Kader-Check (Stub). Spielplan kommt aus Directus-`Fixture` (OpenLigaDB, ODbL).
+Astro-UI mit Login (Directus-User), eigenem Kader, Radar, Kader-Check, Konkurrenz und Aufstellung. Directus nur serverseitig.
 
 ## Voraussetzung
 
-Directus lokal: in `directus/` `docker compose up -d` (siehe `directus/README.md`). Spielplan füllen: in `scraper/` `npm run sync:openligadb`.
+Directus: `directus/` `docker compose up -d`, Schema apply, Rolle `manager` (`node --env-file=../directus/.env ../directus/scripts/ensure-manager-role.mjs` aus `web/` oder vom Repo-Root). User in Directus anlegen, Rolle `manager`.
 
 ## Start
 
-1. Static Token in Directus anlegen (Settings → Access Tokens), Rechte auf `Fixture` lesen.
-2. `cp .env.example .env` und `DIRECTUS_TOKEN` setzen.
-3. `npm install`
-4. `npm run dev` → http://localhost:4321
+1. `cp .env.example .env` — `DIRECTUS_URL=http://localhost:8055`
+2. `npm install`
+3. `npm run dev` → http://localhost:4321 → `/login`
 
-Ohne Token startet die App trotzdem; Deadline und Spielplan zeigen den Hinweis, `DIRECTUS_TOKEN` in `web/.env` zu setzen.
+Kein Static Token mehr für die Seiten. `DIRECTUS_TOKEN` in `.env` ist ungenutzt (kann fehlen).
+
+## Deploy
+
+Adapter `@astrojs/vercel`. Auf Vercel `DIRECTUS_URL` auf die öffentliche Directus-HTTPS-URL setzen. Directus self-hosted (nicht Community-Cloud für 8 User).
 
 ## Tests
 
-`npm test` — Ableitung und Directus-Client gegen Fixtures/Mocks, kein Live-Directus.
+`npm test` — ohne Live-Directus.

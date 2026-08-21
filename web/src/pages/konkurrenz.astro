@@ -1,0 +1,129 @@
+---
+import { DIRECTUS_URL } from "astro:env/server";
+import EmptyState from "../components/EmptyState.astro";
+import { formScore } from "../lib/scores";
+import { notesFor } from "../lib/catalog";
+import {
+  addCompetitor,
+  listCompetitors,
+  listPlayers,
+  listRatings,
+  listSquad,
+  removeCompetitor,
+} from "../lib/directus";
+import Shell from "../layouts/Shell.astro";
+
+const { user, accessToken } = Astro.locals;
+const query = Astro.url.searchParams.get("q") ?? "";
+const rival = Astro.url.searchParams.get("rival") ?? "";
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const action = String(form.get("action") ?? "");
+  if (action === "add") {
+    const names = new Set(
+      (await listCompetitors({ url: DIRECTUS_URL, token: accessToken, userId: user.id })).map(
+        (row) => row.competitor_name,
+      ),
+    );
+    const name = String(form.get("competitor_name") ?? "").trim();
+    if (name && (names.has(name) || names.size < 3)) {
+      await addCompetitor({
+        url: DIRECTUS_URL,
+        token: accessToken,
+        userId: user.id,
+        competitorName: name,
+        playerId: Number(form.get("player_id")),
+      });
+    }
+  }
+  if (action === "remove") {
+    await removeCompetitor({ url: DIRECTUS_URL, token: accessToken, id: Number(form.get("id")) });
+  }
+  return Astro.redirect("/konkurrenz");
+}
+
+const [players, squad, ratings, rivals, searchHits] = await Promise.all([
+  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
+  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  listRatings({ url: DIRECTUS_URL, token: accessToken }),
+  listCompetitors({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  query ? listPlayers({ url: DIRECTUS_URL, token: accessToken, search: query }) : Promise.resolve([]),
+]);
+
+const byId = new Map(players.map((player) => [player.id, player]));
+
+function meanForm(ids: number[]): string {
+  const scores = ids
+    .map((id) => formScore(notesFor(id, ratings)))
+    .filter((value): value is number => value != null);
+  if (scores.length === 0) return "—";
+  return String(Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length));
+}
+
+const groups = new Map<string, typeof rivals>();
+for (const row of rivals) {
+  const list = groups.get(row.competitor_name) ?? [];
+  list.push(row);
+  groups.set(row.competitor_name, list);
+}
+---
+<Shell title="Konkurrenz" userEmail={user.email}>
+  <h1 class="font-[Syne] text-3xl">Konkurrenz</h1>
+  <p class="text-sm text-muted-foreground">
+    2–3 Rivalen aus deiner Comunio-Liga — nicht die App-Freunde.
+  </p>
+
+  {groups.size === 0 ? (
+    <EmptyState body="Noch keine Rivalen. Trage 2–3 Kader aus deiner Comunio-Liga ein — nicht die App-Freunde." />
+  ) : (
+    <div class="grid gap-4 md:grid-cols-2">
+      <section class="rounded-lg border border-border p-4">
+        <h2 class="font-[Syne] text-xl">Mein Kader</h2>
+        <p class="text-sm text-muted-foreground">Form {meanForm(squad.map((row) => row.player_id))}</p>
+      </section>
+      {[...groups.entries()].map(([name, rows]) => (
+        <section class="rounded-lg border border-border p-4">
+          <h2 class="font-[Syne] text-xl">{name}</h2>
+          <p class="text-sm text-muted-foreground">
+            {rows.length} Spieler · Form {meanForm(rows.map((row) => row.player_id))}
+          </p>
+          <ul class="mt-2 space-y-1 text-sm">
+            {rows.map((row) => (
+              <li class="flex justify-between gap-2">
+                <span>{byId.get(row.player_id)?.name ?? `Spieler ${row.player_id}`}</span>
+                <form method="post">
+                  <input type="hidden" name="action" value="remove" />
+                  <input type="hidden" name="id" value={row.id} />
+                  <button class="text-destructive underline" type="submit">Entfernen</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )}
+
+  <section class="space-y-3">
+    <h2 class="font-[Syne] text-xl">Spieler einem Rivalen zuordnen</h2>
+    <form method="get" class="flex flex-wrap gap-2">
+      <input class="rounded-md border border-border bg-card px-3 py-2 text-sm" name="rival" value={rival} placeholder="Name des Rivalen" required />
+      <input class="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm" type="search" name="q" value={query} placeholder="Spieler" />
+      <button class="rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Suchen</button>
+    </form>
+    <ul class="divide-y divide-border">
+      {searchHits.map((player) => (
+        <li class="flex items-center justify-between gap-3 py-2 text-sm">
+          <span>{player.name} · {player.position}</span>
+          <form method="post">
+            <input type="hidden" name="action" value="add" />
+            <input type="hidden" name="competitor_name" value={rival} />
+            <input type="hidden" name="player_id" value={player.id} />
+            <button class="underline" type="submit" disabled={!rival.trim()}>Hinzufügen</button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Shell>

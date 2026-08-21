@@ -1,0 +1,76 @@
+---
+import { DIRECTUS_URL } from "astro:env/server";
+import EmptyState from "../components/EmptyState.astro";
+import { playerPoints } from "../lib/catalog";
+import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
+import { getNextMatchday } from "../lib/fixtures";
+import { pickLineup, type LineupCandidate } from "../lib/lineup";
+import Shell from "../layouts/Shell.astro";
+
+const { user, accessToken } = Astro.locals;
+const load = await listFixtures({ url: DIRECTUS_URL, token: accessToken });
+const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, new Date()) : null;
+const spieltag = matchday?.spieltag ?? 1;
+const [players, squad, ratings, availability] = await Promise.all([
+  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
+  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  listRatings({ url: DIRECTUS_URL, token: accessToken }),
+  listAvailability({ url: DIRECTUS_URL, token: accessToken, spieltag }),
+]);
+const byId = new Map(players.map((player) => [player.id, player]));
+const candidates: LineupCandidate[] = [];
+for (const row of squad) {
+  const player = byId.get(row.player_id);
+  if (!player) continue;
+  if (player.position !== "Torwart" && player.position !== "Abwehr" && player.position !== "Mittelfeld" && player.position !== "Sturm") {
+    continue;
+  }
+  const stats = playerPoints(player, ratings, availability, load.ok ? load.fixtures : [], spieltag);
+  candidates.push({
+    id: player.id,
+    position: player.position,
+    points: stats.points,
+    blocked: stats.blocked,
+  });
+}
+const result = pickLineup(candidates);
+---
+<Shell title="Aufstellung" userEmail={user.email}>
+  <h1 class="font-[Syne] text-3xl">Aufstellung</h1>
+  <p class="text-sm text-muted-foreground">Schätzung, keine Garantie. Übernahme in Comunio bleibt manuell.</p>
+  <form method="get" class="mt-2">
+    <button class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Neu berechnen</button>
+  </form>
+  {!result.ok && result.reason === "no_goalkeeper" ? (
+    <EmptyState body="Kein fitte Torwart im Kader." />
+  ) : !result.ok ? (
+    <EmptyState body="Kader ist zu klein für eine Elf." />
+  ) : (
+    <div class="space-y-6">
+      <p class="text-sm">Formation {result.formation} · {result.total.toLocaleString("de-DE")} erwartete Punkte</p>
+      {(["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const).map((position) => (
+        <section>
+          <h2 class="font-[Syne] text-xl">{position}</h2>
+          <ul class="mt-2 text-sm">
+            {result.eleven
+              .filter((row) => row.position === position)
+              .map((row) => (
+                <li class="flex justify-between border-b border-border py-1">
+                  <span>{byId.get(row.id)?.name}</span>
+                  <span class="tabular-nums">{row.points.toLocaleString("de-DE")}</span>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ))}
+      <section>
+        <h2 class="font-[Syne] text-xl">Bank</h2>
+        <ul class="mt-2 text-sm text-muted-foreground">
+          {result.bench.map((row) => (
+            <li>{byId.get(row.id)?.name} · {row.points.toLocaleString("de-DE")}</li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )}
+</Shell>

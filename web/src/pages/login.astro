@@ -1,0 +1,56 @@
+---
+import "../styles/global.css";
+import { DIRECTUS_URL } from "astro:env/server";
+import { ACCESS_COOKIE, REFRESH_COOKIE, loginWithPassword } from "../lib/session";
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const email = String(form.get("email") ?? "");
+  const password = String(form.get("password") ?? "");
+  const result = await loginWithPassword({ url: DIRECTUS_URL, email, password });
+  if (result.ok) {
+    const secure = Astro.url.protocol === "https:";
+    const opts = { httpOnly: true, path: "/", sameSite: "lax" as const, secure };
+    Astro.cookies.set(ACCESS_COOKIE, result.tokens.access_token, { ...opts, maxAge: 60 * 60 * 24 * 7 });
+    Astro.cookies.set(REFRESH_COOKIE, result.tokens.refresh_token, { ...opts, maxAge: 60 * 60 * 24 * 30 });
+    return Astro.redirect("/");
+  }
+  error =
+    result.reason === "invalid_credentials"
+      ? "E-Mail oder Passwort stimmt nicht."
+      : "Directus nicht erreichbar. In `directus/` `docker compose up -d`.";
+}
+---
+<html lang="de" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anmelden · Comunio Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Syne:wght@700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
+    <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+      <p class="font-[Syne] text-lg tracking-tight">Comunio Assistant</p>
+      <h1 class="mt-4 font-[Syne] text-3xl">Anmelden</h1>
+      <p class="mt-2 text-sm text-muted-foreground">Nur eingeladene Accounts. Keine Selbst-Registrierung.</p>
+      {error ? <p class="mt-4 text-sm text-destructive" role="alert">{error}</p> : null}
+      <form method="post" class="mt-6 space-y-3">
+        <label class="block text-sm">
+          E-Mail
+          <input class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2" type="email" name="email" required autocomplete="username" />
+        </label>
+        <label class="block text-sm">
+          Passwort
+          <input class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2" type="password" name="password" required autocomplete="current-password" />
+        </label>
+        <button class="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground" type="submit">
+          Anmelden
+        </button>
+      </form>
+    </main>
+  </body>
+</html>

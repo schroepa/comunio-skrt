@@ -16,8 +16,20 @@ docker compose up -d
 docker compose exec directus npx directus schema apply --yes ./schema/snapshot.yaml
 ```
 
-Nach einem `git pull` dasselbe `schema apply --yes` ausführen, damit neue Felder (z. B. `Player.transfermarkt_id`) in der laufenden Instanz ankommen.
+Nach einem `git pull` dasselbe `schema apply --yes` ausführen, damit neue Felder (`SquadMembership.user_id`, `ManagerProfile`, `CompetitorSquad`) ankommen.
+
+Invite-Rolle (einmal, Directus muss laufen):
+
+```bash
+node --env-file=directus/.env directus/scripts/ensure-manager-role.mjs
+```
+
+Danach in der Admin-UI User anlegen und die Rolle **manager** zuweisen. Keine öffentliche Registrierung.
+
+Directus 12 Core speichert keine Item-Filter (`$CURRENT_USER`). Die App filtert trotzdem nach Session-User; Directus-Admin-URL nicht an die Freundesrunde geben.
+
+Production: `PUBLIC_URL` in `.env` auf die HTTPS-URL von Directus setzen.
 
 ## Collections
 
-`Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus`, `SquadMembership` (siehe `../CLAUDE.md`), plus `ScrapeLog` (siehe `../docs/spec-datenpipeline.md`, Abschnitt „Architektur").
+`Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus`, `SquadMembership` (`user_id`), `ManagerProfile`, `CompetitorSquad`, `ScrapeLog`.

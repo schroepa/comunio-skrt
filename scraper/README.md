@@ -6,6 +6,7 @@ Datenquellen:
 
 - [OpenLigaDB](https://www.openligadb.de/) (ODbL — Namensnennung) für den Spielplan
 - [transfermarkt.de](https://www.transfermarkt.de/) für Spielerkatalog, Marktwerte und Verfügbarkeit — private, niedrigfrequente Nutzung; bei HTTP 403 den Lauf abbrechen, die Sperre nicht umgehen
+- [kicker.de](https://www.kicker.de/) für Spielernoten — private, niedrigfrequente Nutzung; bei HTTP 403 abbrechen, die Sperre nicht umgehen
 
 ## Voraussetzungen
 
@@ -56,14 +57,22 @@ Danach im Directus-Admin prüfen:
 
 Ist `Fixture` leer, schlägt nur der Verfügbarkeitsteil fehl — zuerst `npm run sync:openligadb` ausführen.
 
+## Kicker-Noten
+
+```bash
+npm run sync:kicker
+```
+
+Optional `KICKER_SPIELTAG`, `KICKER_SEASON` (Default `2026-27`), `KICKER_NOTES_URL`. User-Agent `comunio-helper/0.1 (private)`. HTTP 403: Lauf abbrechen. Spieler werden über normalisierte Namen an `Player` gebunden, keine neuen Player.
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Parser-Tests verwenden nur `tests/fixtures/`, nicht die Live-API und nicht Live-Transfermarkt.
+Parser-Tests verwenden nur `tests/fixtures/`, nicht die Live-API und nicht Live-Transfermarkt/Kicker.
 
 ## Noch nicht in dieser Phase
 
-Cron-Zeitplan, CSV-Fallback, kicker.de — siehe `../docs/spec-datenpipeline.md`.
+Cron-Zeitplan, CSV-Fallback — siehe `../docs/spec-datenpipeline.md`.
