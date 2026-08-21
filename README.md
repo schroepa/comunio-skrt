@@ -6,7 +6,7 @@
 
 Persönliches Werkzeug für Comunio-Entscheidungen in der Bundesliga: **Spielplan und Deadline**, **Marktwert-Katalog**, später **Kader-Check** und **Spieler-Radar**. Comunio stellt keine offizielle API bereit — der eigene Kader wird deshalb manuell gepflegt, Katalog und Spielplan kommen aus öffentlichen Quellen.
 
-Repo auf GitHub: [`schroepa/comunio-skrt`](https://github.com/schroepa/comunio-skrt). Ein Nutzer, kein Login, kein Multi-User.
+Repo auf GitHub: [`schroepa/comunio-skrt`](https://github.com/schroepa/comunio-skrt). Heute noch ohne Login; geplant: Invite-only App-Mitglieder + Directus self-host mit 1 Admin (`docs/spec-auth.md`, `docs/spec-hosting-directus.md`).
 
 ## Stand
 
@@ -44,7 +44,7 @@ flowchart LR
 ```
 
 - **`web/`** — Astro 7, React-Islands, Tailwind, shadcn/ui. Liest Directus nur serverseitig.
-- **`directus/`** — lokale SQLite-Instanz (Docker). Einzige Quelle der Wahrheit.
+- **`directus/`** — SQLite-Instanz (Docker), lokal und später self-hosted (Oracle Always Free o. ä.). Einzige Quelle der Wahrheit; Prod: 1 Admin.
 - **`scraper/`** — CLI, schreibt nur. OpenLigaDB und Transfermarkt getrennt ausführbar.
 
 ## Schnellstart
@@ -85,8 +85,9 @@ Details: [`directus/README.md`](directus/README.md), [`scraper/README.md`](scrap
 | `RatingHistory` | Kicker-Note, Minuten | folgt (kicker) |
 | `Fixture` | Spieltag, Teams, Kickoff | Scraper (OpenLigaDB) |
 | `AvailabilityStatus` | fit / fraglich / verletzt / gesperrt je Spieltag | Scraper |
-| `SquadMembership` | eigener Kader, Kaufpreis | **immer manuell** |
-| `CompetitorSquad` | 2–3 Liga-Rivalen | manuell, später |
+| `Mitglied` | App-Login, Anzeigename, Budget (≤10) | Admin legt an (V1.25) |
+| `SquadMembership` | eigener Kader, Kaufpreis (pro Mitglied) | **immer manuell** |
+| `CompetitorSquad` | 2–3 Liga-Rivalen (pro Mitglied) | manuell, später |
 | `ScrapeLog` | Erfolg/Fehler je Quelle | Scraper |
 
 ## Datenquellen
@@ -109,13 +110,13 @@ Kein rechtlicher Rat. Transfermarkt-ToS (§11.1) untersagt Scraping; das ist ein
 3. Kader-Check vor der Deadline — [`docs/spec-kader-check.md`](docs/spec-kader-check.md)
 4. Dashboard als Klammer — [`docs/spec-dashboard.md`](docs/spec-dashboard.md)
 
-Als Nächstes in der UI: Kader-Picker (Suche in `Player`, Schreiben von `SquadMembership`), danach Radar an den Katalog anschließen. Formscore braucht Kicker-Noten.
+Als Nächstes in der UI: Kader-Picker (ideal **nach** oder zusammen mit Auth, damit `SquadMembership.user_id` von Anfang an gesetzt wird), danach Radar an den Katalog anschließen. Formscore braucht Kicker-Noten.
 
-**V1.5** Konkurrenz-Vergleich (leicht). **V2** Aufstellung, Punkteprognose, voller Konkurrenz-Vergleich.
+**V1.25** Gruppen-Login + Directus-Hosting — [`docs/spec-auth.md`](docs/spec-auth.md), [`docs/spec-hosting-directus.md`](docs/spec-hosting-directus.md). **V1.5** Konkurrenz-Vergleich (leicht). **V2** Aufstellung, Punkteprognose, voller Konkurrenz-Vergleich.
 
 ### Nicht in V1
 
-Kein Multi-User, keine Comunio-Login-Anbindung, keine Punkteprognose, keine automatische Aufstellungsoptimierung.
+Kein öffentliches Signup, keine Comunio-Login-Anbindung, keine Punkteprognose, keine automatische Aufstellungsoptimierung.
 
 ## Doku-Index
 
