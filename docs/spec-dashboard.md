@@ -33,4 +33,4 @@ Kompakte Teaser-Liste der stärksten Kauf-/Verkaufssignale aus `spec-transfermar
 - `spec-transfermarkt.md` (Top-Signale)
 - `spec-kader-check.md` (Alerts)
 - Datenmodell: `SquadMembership`, `UserProfile`, `Fixture` (siehe `../CLAUDE.md`)
-- Ab V1.25: Budget und Kaderwert scoped auf den eingeloggten User (`spec-auth.md`)
+- Ab V1.25: Budget und Kaderwert scoped auf das eingeloggte `Mitglied` (`spec-auth.md`)

@@ -7,7 +7,7 @@ Der teuerste und am leichtesten vermeidbare Fehler in Fantasy-Manager-Spielen is
 
 ## Datenbasis
 Nutzt vorhandene Entitäten aus `../CLAUDE.md`, keine neuen Felder nötig außer `AvailabilityStatus` (bereits im Root-Datenmodell ergänzt):
-- `SquadMembership` (wer ist im eigenen Kader; ab V1.25 gefiltert auf den eingeloggten User, siehe `spec-auth.md`)
+- `SquadMembership` (wer ist im eigenen Kader; ab V1.25 gefiltert auf das eingeloggte `Mitglied`, siehe `spec-auth.md`)
 - `AvailabilityStatus` (fit / fraglich / verletzt / gesperrt, je Spieltag)
 - `RatingHistory.minuten_gespielt` (Rotationsrisiko-Proxy)
 

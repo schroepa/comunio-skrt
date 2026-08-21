@@ -1,159 +1,128 @@
 # Design: Gruppen-Login (Invite-only Auth)
 
-**Datum:** 2026-08-21  
+**Datum:** 2026-08-21 (revidiert: App-Mitglieder, nicht Directus-Seats)  
 **Status:** bereit für Implementierungsplan  
-**Baut auf:** `docs/spec-auth.md`, `CLAUDE.md`, `SECURITY.md`, Dashboard-Shell (`web/`)  
+**Baut auf:** `docs/spec-auth.md`, `docs/spec-hosting-directus.md`, `SECURITY.md`, Dashboard-Shell (`web/`)  
 **Nicht dieser Schnitt:** Kader-Picker-UI, Magic Link, OAuth, Konkurrenzvergleich, öffentliches Signup
 
 ## Ziel
 
-Geschlossener Zugang für die Comunio-Freundesgruppe: jeder Freund loggt sich ein, sieht geteilte Ligadaten und pflegt **nur den eigenen** Kader/Budget. Eine Instanz = eine Liga-Gruppe.
+Geschlossener Zugang für die Comunio-Freundesgruppe (≤10). Directus bleibt **Ein-Admin-Backend**. Identität der Freunde lebt in Collection `Mitglied` + Astro-Session.
 
 ## Entscheidungen (fest)
 
 | Thema | Wahl | Warum |
 |---|---|---|
-| IdP | **Directus Users** (E-Mail/Passwort) | Schon im Stack; Roles/Permissions und Tokens vorhanden; kein Extra-Vendor |
-| Zugang | **Invite-only** (Admin legt User an) | Kleine Gruppe; kein Spam/Signup-Abuse; passt zu „persönliches Tool für Freunde“ |
-| Session | Astro Server + **httpOnly Cookies** (Access + Refresh) | Token nie im Browser-JS; passt zur bestehenden SSR-only-Directus-Regel |
-| App-Schutz | Astro **Middleware** auf allen App-Routen | Eine Gatekeeper-Stelle statt Checks pro Seite |
-| Persönliche Daten | Directus-Calls mit **User-Access-Token** | Row-Level-Filter `$CURRENT_USER` greifen serverseitig in Directus |
-| Scraper | Unverändert Admin-/Service-Login bzw. Static Token | Scraper ist kein User der Web-App |
-| Budget | Collection **`UserProfile`** | Dashboard braucht `budget_uebrig` pro Person; gehört nicht an `SquadMembership` |
-| Kader-Scope | `SquadMembership.user_id` required | Sonst kollidieren Kader der Freunde |
-| Tenant-Modell | **Eine Deploy-Instanz = eine Gruppe** | Kein `liga_id`/Multi-Tenant in V1.25 |
-| Registrierung | Kein Self-Signup in der App | Admin legt Accounts in Directus an (UI oder API) |
+| IdP | **Astro** gegen Collection `Mitglied` | Keine Directus-Seats; max. 10 Frontend-Konten |
+| Directus Studio | **1 Admin** | Owner pflegt Schema/Daten; Freunde brauchen Studio nicht |
+| Directus API-Zugang | **Ein Static/Service-Token** von Astro + Scraper | Einfach, passt zu Self-Host |
+| Isolation | App filtert `mitglied_id` | Directus `$CURRENT_USER` gilt nicht für App-Mitglieder |
+| Zugang | Invite-only (Admin legt `Mitglied` an) | Kleine Gruppe |
+| Session | httpOnly Cookie (App-Session) | Token/Passwort-Hash nie im Browser-JS |
+| Budget | Felder auf `Mitglied` | Kein separates Profil an `directus_users` |
+| Kader-Scope | `SquadMembership.mitglied_id` | Trennt Kader der Freunde |
+| Hosting | Self-Host gratis — siehe Hosting-Spec | Cloud nicht kostenlos |
 
 ## Abgelehnte Alternativen
 
-| Alternative | Warum nicht jetzt |
+| Alternative | Warum nicht |
 |---|---|
-| Clerk / Auth.js / Supabase Auth | Extra IdP, doppelte User-Quelle neben Directus |
-| Nur Basic-Auth / HTTP-Passwort vor Vercel | Keine pro-User-Kader; alle teilen denselben Static Token |
-| Shared Static Token + „Name wählen“ im LocalStorage | Keine echte Isolation, spoofbar, nicht für Deploy mit Freunden |
-| Öffentliches Signup mit Invite-Code | Mehr Angriffsfläche; für ~5–15 Freunde Overkill; Admin-Anlage reicht |
-| OAuth (Google/GitHub) | Friction niedriger, aber Setup + Account-Linking; später optional |
-| Magic Link only | Braucht Mail-Provider in Directus/Cloud; Passwort ist für kleinen Kreis einfacher zu starten |
+| Directus Users je Freund + RBAC | Widerspricht „nur 1 Directus-Nutzer“; unnötige Seats |
+| Clerk / Auth0 | Extra Vendor für ≤10 Personen |
+| Shared Passwort / Basic-Auth vor der App | Keine pro-Person-Kader |
+| LocalStorage „Name wählen“ | Spoofbar, keine echte Isolation |
 
 ## Architektur
 
 ```
-                    ┌─────────────┐
-   Freunde ────────►│  web/ Astro │
-                    │  Middleware │
-                    └──────┬──────┘
-                           │ User JWT (Server)
-                           ▼
-                    ┌─────────────┐     Shared read
-                    │  Directus   │◄──────────────── Player, Fixture, …
-                    │  Roles:     │
-                    │  Admin /    │     Own read/write
-                    │  Mitglied   │◄──────────────── SquadMembership, UserProfile
-                    └──────┬──────┘
-                           ▲
-                    scraper│ Admin/Service Token (unverändert)
+Freunde ──► Astro (Vercel) ──Service-Token──► Directus (Self-Host, 1 Admin)
+               │                                 │
+               │ App-Session                     ├─ read: Player, Fixture, …
+               │ (Cookie)                        └─ R/W: Mitglied, SquadMembership
+               │                                        (App setzt mitglied_id-Filter)
+Scraper ───────┴──────────Token/Admin─────────────────────┘
 ```
 
-### Session-Details
+### Login-Details
 
-1. `POST /auth/login` an Directus mit E-Mail/Passwort.
-2. Response: `access_token`, `refresh_token`, `expires`.
-3. Server setzt httpOnly, Secure, SameSite=Lax Cookies (Namen z. B. `ds_access`, `ds_refresh`).
-4. Middleware: fehlt Access → Refresh versuchen → sonst Redirect `/login?redirect=…`.
-5. Logout: Directus `/auth/logout` + Cookies löschen.
+1. Formular `email` + `password` → Astro Action/API.
+2. `GET /items/Mitglied?filter[email][_eq]=…` mit Service-Token (Felder inkl. `password_hash` nur serverseitig anfordern).
+3. `argon2`/`bcrypt.compare`; bei Fehler generische Meldung.
+4. Session speichern: `{ mitgliedId, anzeigename }` in verschlüsseltem httpOnly Cookie (iron-session o. ä.).
+5. Middleware: ohne Session → `/login?redirect=…`.
+6. Logout: Cookie löschen.
 
-Env (`web/.env`): `DIRECTUS_URL` bleibt. `DIRECTUS_TOKEN` entfällt für App-Seiten (oder nur noch als optionaler Dev-Bypass lokal, dokumentiert und nicht für Prod mit Freunden).
+Passwort setzen: kleines CLI `npm run mitglied:set-password -- email@…` das Hash schreibt — Admin tippt kein Hash von Hand in Studio.
 
-### Directus Permissions (Skizze)
+### Directus Permissions
 
-**Rolle `Mitglied`:**
-
-| Collection | Create | Read | Update | Delete | Filter |
-|---|---|---|---|---|---|
-| Player, ValueHistory, RatingHistory, Fixture, AvailabilityStatus | — | ✓ | — | — | — |
-| SquadMembership | ✓ | ✓ | ✓ | ✓ | `user_id = $CURRENT_USER` |
-| UserProfile | ✓* | ✓ | ✓ | — | `user_id = $CURRENT_USER` |
-| ScrapeLog | — | — | — | — | — |
-
-\*Create nur wenn noch kein Profil existiert (App legt Profil beim ersten Login an, oder Admin pre-creates).
-
-**Rolle `Admin`:** volle Rechte inkl. User-Management.
+Für den **einen** Admin/Service-Token: Lesen Ligadaten, CRUD `Mitglied`/`SquadMembership` (Token ist privilegiert).  
+Sicherheit der Trennung liegt in der **Astro-Schicht** (jeder Query mit `filter[mitglied_id][_eq]=session`). Zusätzlich: Directus Studio nicht öffentlich ohne Härte (Hosting-Design).
 
 ## Schema
 
-### `SquadMembership` (Erweiterung)
+### `Mitglied`
 
 | Feld | Typ | Hinweis |
 |---|---|---|
-| `user_id` | uuid, M2O → `directus_users` | required, indexed |
+| `id` | integer | PK |
+| `email` | string | unique, required |
+| `password_hash` | string | required |
+| `anzeigename` | string | required |
+| `budget_uebrig` | integer | default 0 |
+| `aktiv` | boolean | default true; Login verweigern wenn false |
+| `liga_name` | string | optional |
+| `angelegt_am` | timestamp | |
+
+### `SquadMembership`
+
+| Feld | Typ | Hinweis |
+|---|---|---|
+| `mitglied_id` | integer M2O → Mitglied | required, indexed |
 | bestehend | `player_id`, `im_kader`, `kaufpreis`, `hinzugefuegt_am` | unverändert |
 
-Unique: `(user_id, player_id)`.
+Unique `(mitglied_id, player_id)`.
 
-### `UserProfile` (neu)
+Migration: bestehende Kaderzeilen dem ersten Mitglied (Owner) zuweisen.
 
-| Feld | Typ | Hinweis |
-|---|---|---|
-| `id` | integer PK | |
-| `user_id` | uuid, M2O → `directus_users` | unique, required |
-| `anzeigename` | string | Anzeige in Shell |
-| `budget_uebrig` | integer | Comunio-Restbudget in € |
-| `liga_name` | string, optional | nur Label, kein Tenant-Key |
-
-Snapshot `directus/schema/snapshot.yaml` aktualisieren; lokal `schema apply --yes`.
-
-### Migration Einzelnutzer → Gruppe
-
-1. Admin-User existiert bereits.
-2. Alle bestehenden `SquadMembership` ohne `user_id` → Admin zuweisen.
-3. `UserProfile` für Admin mit aktuellem Budget anlegen (manuell).
-4. Danach `user_id` auf required setzen.
-
-## UI-Schnitt
+## UI
 
 | Route | Verhalten |
 |---|---|
-| `/login` | Formular; nach Erfolg Redirect auf `redirect` oder `/` |
-| `/logout` | POST/GET Logout, Redirect `/login` |
-| `/`, `/radar`, `/kader-check`, … | Middleware: Session Pflicht |
-| Shell | Anzeigename aus `UserProfile` (Fallback: Directus `first_name` / E-Mail), Logout-Link |
+| `/login` | Formular |
+| `/logout` | Session weg, Redirect Login |
+| App-Routen | Middleware |
+| Shell | Anzeigename + Logout |
 
-Login-UI bleibt schlicht (Produkt-Tool, keine Marketing-Landing). Bestehende Shell-Optik beibehalten.
-
-## Auswirkungen auf bestehende Specs
+## Auswirkungen
 
 | Spec / Doku | Änderung |
 |---|---|
-| `CLAUDE.md` | Nicht-Ziel „Kein Multi-User/Auth“ entfernen; V1.25 + `UserProfile` / `user_id` ergänzen |
-| `SECURITY.md` | Modell: Sessions statt „nur Static Token für die App“; weiterhin keine Tokens im Browser |
-| `spec-dashboard.md` | Budget/Kaderwert scoped auf Session-User |
-| `spec-kader-check.md` | `SquadMembership` Filter = aktueller User |
-| `spec-transfermarkt.md` | Radar bleibt geteilt; Filter „Nur mein Kader“ = Session-User |
-| Kader-Picker (folgt) | Schreibt immer `user_id` aus Session |
-| Scraper / Datenpipeline | Unverändert (keine User-Dimension) |
+| Früheres Directus-User-IdP | **verworfen** |
+| `spec-hosting-directus.md` | Self-Host, 1 Admin |
+| Dashboard / Kader-Check | Scope = Session-`mitglied_id` |
+| SECURITY | Service-Token + App-Sessions |
 
-## Implementierungsphasen (Vorschlag für Folge-Plan)
+## Implementierungsphasen (Vorschlag)
 
-1. **Schema + Roles** in Directus (inkl. Snapshot, Migration Admin-Kader).
-2. **Auth-Modul in `web/`** — login/logout, Cookies, Middleware, Directus auth client.
-3. **Datenaufrufe umstellen** — Fixture/Player mit User-Token; Squad/Profile gefiltert.
-4. **Shell** — User-Anzeige + Logout; Login-Seite.
-5. **Doku** — Invite-Runbook (wie Freunde anlegen), SECURITY/README.
+1. Hosting Prod-Compose (Oracle) + Token in Vercel  
+2. Schema `Mitglied` + `mitglied_id`  
+3. Auth-Modul Astro (Login/Session/Middleware) + Passwort-CLI  
+4. Alle Squad/Budget-Reads an Session binden  
+5. Invite-Runbook (Admin: Mitglied anlegen, Passwort-CLI, Freund loggt ein)
 
 ## Risiken
 
 | Risiko | Mitigation |
 |---|---|
-| Refresh-Token-Diebstahl (Cookie) | httpOnly + Secure + kurze Access-TTL; HTTPS auf Vercel |
-| Mitglied sieht fremden Kader durch fehlenden Filter | Directus-Permission-Filter **und** App filtert explizit; Tests |
-| Static Token bleibt in Prod-Env und umgeht Auth | Token aus Web-Prod-Env entfernen; nur Scraper/Admin |
-| Freunde teilen Passwörter | Kurzes Invite-Runbook; später Magic Link |
-| Directus Cloud vs. self-host Limits | Roles/Users im Community-Tier prüfen vor Prod-Invite |
+| Service-Token kompromittiert | Nur Server-Env; Studio härten; Token rotieren |
+| App vergisst `mitglied_id`-Filter | Zentrale Data-Access-Hilfen + Tests mit 2 Mitgliedern |
+| Oracle Capacity | Fallback Mini-VPS dokumentiert |
+| Hash in Studio sichtbar für Admin | Akzeptabel (Admin = Owner); Feld nicht an API ohne Auth exposen |
 
-## Fertig wenn (Acceptance)
+## Fertig wenn
 
-- Unauthenticated Request auf `/` landet auf `/login`.
-- Zwei Test-User haben getrennte `SquadMembership`; keiner sieht den Kader des anderen über die App.
-- Beide sehen dieselben `Fixture`-Daten.
-- Scraper schreibt weiter ohne Web-Session.
-- SECURITY.md und CLAUDE.md beschreiben das neue Modell.
+- Login ohne Directus-Seat für Freunde  
+- Zwei Mitglieder: getrennte Kader, gleiche Fixtures  
+- Directus Studio: nur 1 Admin-Account  
+- SECURITY/CLAUDE beschreiben Service-Token + `Mitglied`

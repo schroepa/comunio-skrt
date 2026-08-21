@@ -5,7 +5,7 @@ Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt, Aufstellung, 
 
 ## Tech-Stack
 - Frontend: Astro + React (Islands) + Tailwind + shadcn/ui, gehostet auf Vercel
-- Backend/Datenschicht: Directus (Directus Cloud, kostenloser Community-Tier — kein eigener Server nötig; Alternative bei Bedarf: Railway/Render mit Directus-Template)
+- Backend/Datenschicht: Directus **self-hosted** (Ziel: Oracle Cloud Always Free + Docker/SQLite; Fallback Mini-VPS). Genau 1 Studio-Admin. Siehe `docs/spec-hosting-directus.md`. Directus Cloud ist nicht mehr die kostenlose Default-Option.
 - Scraper: läuft als Vercel Cron Job (zeitgesteuerte Serverless Function), schreibt über die Directus-REST-API — kein eigenständiger Dauerbetrieb nötig
 - Repo: GitHub, Deployment über Vercel-GitHub-Integration
 
@@ -14,10 +14,10 @@ Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt, Aufstellung, 
 - **ValueHistory**: player_id, datum, marktwert
 - **RatingHistory**: player_id, spieltag, note, minuten_gespielt
 - **Fixture**: spieltag, heim_verein, auswaerts_verein, datum
-- **SquadMembership**: user_id, player_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell gepflegt, pro eingeloggtem User
-- **UserProfile** *(neu, V1.25)*: user_id, anzeigename, budget_uebrig, liga_name (optional) — ein Profil pro Mitglied
+- **Mitglied** *(neu, V1.25)*: email, password_hash, anzeigename, budget_uebrig, aktiv — App-Login (≤10), **nicht** Directus-Seat
+- **SquadMembership**: mitglied_id, player_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell gepflegt, pro App-Mitglied
 - **AvailabilityStatus** *(neu)*: player_id, spieltag, status (fit / fraglich / verletzt / gesperrt), quelle, aktualisiert_am — spieltagsbezogen, da sich der Status wöchentlich ändert
-- **CompetitorSquad** *(neu)*: user_id, competitor_name, player_id — manuell gepflegt, begrenzt auf 2–3 engste Liga-Rivalen, scoped pro User
+- **CompetitorSquad** *(neu)*: mitglied_id, competitor_name, player_id — manuell gepflegt, begrenzt auf 2–3 engste Liga-Rivalen, scoped pro Mitglied
 
 ## Roadmap
 
@@ -28,7 +28,7 @@ Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt, Aufstellung, 
 4. Dashboard (Klammer über 2+3: Budget, Deadline, Alerts) → `docs/spec-dashboard.md`
 
 **V1.25 — Gruppen-Login (Invite-only)**
-- Freunde der Comunio-Gruppe melden sich an; eigener Kader/Budget, geteilte Ligadaten → `docs/spec-auth.md`
+- Freunde der Comunio-Gruppe melden sich in der App an (Collection `Mitglied`); Directus nur 1 Admin; Hosting self-hosted gratis → `docs/spec-auth.md`, `docs/spec-hosting-directus.md`
 
 **V1.5 — Konkurrenz-Vergleich (leicht)**
 - Nutzt vorhandenen Formscore, keine Abhängigkeit zur Punkteprognose → `docs/spec-konkurrenzvergleich.md`
@@ -56,7 +56,8 @@ docs/
   spec-transfermarkt.md      ← fertig
   spec-kader-check.md        ← fertig
   spec-dashboard.md          ← fertig
-  spec-auth.md               ← fertig (V1.25 Gruppen-Login)
+  spec-auth.md               ← fertig (V1.25 Gruppen-Login, App-Mitglieder)
+  spec-hosting-directus.md   ← fertig (Directus self-host, €0-Ziel)
   spec-konkurrenzvergleich.md ← folgt (leicht: V1.5, voll: V2)
   spec-aufstellung.md        ← folgt (V2)
   spec-punkteprognose.md     ← folgt (V2)

@@ -1,103 +1,81 @@
 # Spec: Gruppen-Login (Invite-only)
 
-Teil von V1.25. Root-Kontext siehe `../CLAUDE.md`.
+Teil von V1.25. Root-Kontext siehe `../CLAUDE.md`. Hosting: `spec-hosting-directus.md`.
 
 ## Ziel
 
-Freunde aus derselben Comunio-Gruppe melden sich an und nutzen denselben Assistenten — jeweils mit **eigenem Kader**, **eigenem Budget** und denselben geteilten Ligadaten (Spielplan, Marktwerte, Verfügbarkeit, später Noten). Kein öffentliches Produkt, keine Selbstregistrierung im Internet.
+Freunde aus derselben Comunio-Gruppe melden sich in der **Astro-App** an und nutzen denselben Assistenten — jeweils mit **eigenem Kader**, **eigenem Budget** und denselben geteilten Ligadaten. Kein öffentliches Produkt, keine Selbstregistrierung.
+
+**Wichtig:** Directus hat nur **einen Admin** (Studio). Die bis zu ~10 Freunde sind **App-Mitglieder** (`Mitglied`), keine Directus-User/Seats.
 
 ## Problem
 
-Heute ist das Tool bewusst Ein-Nutzer: die Web-App liest Directus serverseitig mit einem Static Token, `SquadMembership` hat keinen User-Bezug, und `SECURITY.md` / Roadmap schließen Multi-User aus. Sobald mehrere Manager denselben Deploy teilen, müssen Identität und Kader-Daten getrennt sein — sonst überschreiben sich Kader und Alerts.
+Heute liest die Web-App Directus mit einem Static Token und `SquadMembership` hat keinen Mitglieder-Bezug. Sobald mehrere Manager denselben Deploy teilen, müssen Identität und Kader getrennt sein — ohne Directus mit vielen Studio-Accounts aufzublähen oder Cloud-Seats zu bezahlen.
 
 ## Nutzer & Zugang
 
-| Rolle | Wer | Kann |
-|---|---|---|
-| **Admin** | Repo-/Instanz-Owner | Nutzer anlegen/einladen, Schema, Scraper-Token, Directus-Admin |
-| **Mitglied** | Comunio-Gruppenfreund (Invite) | App nutzen, eigenen Kader pflegen, geteilte Ligadaten lesen |
+| Rolle | Wo | Wer | Kann |
+|---|---|---|---|
+| **Directus-Admin** | Directus Studio | Instanz-Owner (1 Person) | Schema, Tokens, Mitglieder anlegen, Scraping-Daten prüfen |
+| **Mitglied** | Frontend-Login | Comunio-Freund (≤10) | App nutzen, eigenen Kader/Budget pflegen, Ligadaten sehen |
 
-- **Invite-only:** Accounts legt der Admin an (Directus-User oder Einladungslink). Kein öffentliches „Registrieren“.
-- **Erster Auth-Pfad:** E-Mail + Passwort über Directus Auth.
-- **Optional später:** Magic Link / OAuth, wenn Passwort-Friction in der Gruppe stört — nicht Teil des ersten Schnitts.
+- **Invite-only:** Admin legt `Mitglied`-Datensätze an (Studio oder später kleines Admin-UI). Kein öffentliches Signup.
+- **Auth-Pfad:** E-Mail + Passwort, geprüft in Astro gegen `Mitglied.password_hash`.
+- Directus `/auth/login` wird von Freunden **nicht** benutzt.
 
 ## Was geteilt vs. privat ist
 
 | Daten | Sichtbarkeit |
 |---|---|
-| `Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus` | alle Mitglieder (Lesen) |
-| `SquadMembership`, Budget / Profil | nur der jeweilige User (Lesen + Schreiben) |
-| `CompetitorSquad` | nur der jeweilige User (manuell); später optional Verknüpfung zu anderen App-Nutzern |
-| `ScrapeLog`, Schema, User-Verwaltung | nur Admin |
+| `Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus` | alle eingeloggten Mitglieder (Lesen via App) |
+| `SquadMembership`, Budget-Felder auf `Mitglied` | nur das jeweilige Mitglied |
+| `CompetitorSquad` | nur das jeweilige Mitglied |
+| `ScrapeLog`, Schema, Tokens | nur Directus-Admin |
 
-Radar und Spielplan bleiben **ligaweit gleich**. Dashboard, Kader-Check und Kaderwert filtern immer auf den eingeloggten User.
+## Datenmodell
 
-## Datenmodell (Erweiterungen)
-
-Bestehende Collections bleiben; Ergänzungen:
-
-- **`SquadMembership.user_id`** — M2O auf `directus_users`, required. Unique-Constraint sinnvoll: `(user_id, player_id)`.
-- **`UserProfile`** *(neu)*: `user_id`, `anzeigename`, `budget_uebrig` (integer, Comunio-Cash), optional `liga_name`. Ein Profil pro User.
-- **`CompetitorSquad.user_id`** — sobald die Collection gebaut wird: pro User, nicht global.
-
-Migration: vorhandene `SquadMembership`-Zeilen ohne User dem Admin-Account zuordnen.
+- **`Mitglied`** *(neu)*: `email`, `password_hash`, `anzeigename`, `budget_uebrig`, `aktiv`, optional `liga_name`, `angelegt_am`
+- **`SquadMembership.mitglied_id`** — M2O → `Mitglied`, required; Unique `(mitglied_id, player_id)`
+- Kein FK auf `directus_users` für App-Nutzer
 
 ## Auth-Fluss (Web)
 
 ```
-Browser  →  /login (E-Mail/Passwort)
-                ↓
-         Astro Server  →  Directus POST /auth/login
-                ↓
-         httpOnly Session-Cookie (Refresh + Access, nur Server)
-                ↓
-         Astro Middleware: geschützte Routen brauchen Session
-                ↓
-         Directus-Calls mit User-Access-Token (persönliche Daten)
-         + ggf. weiterhin Service-Token nur für Admin/Scraper, nie im Browser
+Browser  →  /login
+               ↓
+        Astro: Mitglied per E-Mail laden (Directus + Service-Token)
+               ↓
+        Passwort gegen password_hash prüfen
+               ↓
+        httpOnly App-Session-Cookie (Astro)
+               ↓
+        Middleware schützt App-Routen
+               ↓
+        Directus-Calls weiterhin mit einem Service-Token;
+        Filter immer mitglied_id = Session
 ```
 
-- Geschützt: `/`, `/radar`, `/kader-check` und alle späteren App-Routen.
-- Öffentlich: `/login` (und später `/logout`).
-- Logout invalidiert Directus-Session und löscht Cookies.
-- Static Token aus dem Dashboard-Shell-Schnitt entfällt für normale App-Nutzung; Scraper behält Admin-/Service-Zugang unverändert.
+- Geschützt: `/`, `/radar`, `/kader-check`, …
+- Öffentlich: `/login`, `/logout`
+- Scraper: unverändert Admin-/Service-Token, kein App-Login
 
 ## UI (V1.25)
 
-- Login-Seite: Markenname, kurzer Hinweis „nur für die Liga-Gruppe“, E-Mail, Passwort, Fehlerzustände.
-- In der Shell: Anzeigename + Logout.
-- Kein Account-Self-Service außer Passwort ändern (kann zunächst über Directus-Admin laufen).
-- Keine öffentliche Landing-Page mit Marketing — die App ist die Login-Wand.
+- Login-Seite: Markenname, Hinweis „nur Liga-Gruppe“, E-Mail, Passwort
+- Shell: Anzeigename + Logout
+- Mitglieder-Anlage zunächst über Directus Studio (Admin); Passwort-Hash serverseitig setzen (Hilfsskript), kein Klartext-Feld als Workflow
 
-## Permissions (Directus)
+## Nicht-Ziele
 
-Rolle **Mitglied**:
-
-- Read: Ligadaten-Collections
-- Create/Update/Delete: `SquadMembership` und `UserProfile` mit Filter `user_id = $CURRENT_USER`
-- Kein Zugriff auf `ScrapeLog`, keine User-Admin-Rechte
-
-Rolle **Admin**: alles wie bisher (inkl. Schema und Tokens).
-
-## Nicht-Ziele (dieser Schnitt)
-
-- Kein öffentliches Signup / kein SaaS-Billing
-- Keine Comunio-OAuth (technisch nicht verfügbar)
-- Kein Teilen fremder Kader ohne explizite spätere Spec (Konkurrenzvergleich V1.5 bleibt opt-in / manuell)
-- Keine Push-Benachrichtigungen, kein Magic Link im ersten Bau
-- Kein Multi-Liga / Multi-Tenant über Gruppen-IDs — eine Instanz = eine Comunio-Gruppe
+- Keine Directus-Seats / Roles pro Freund
+- Kein öffentliches Signup / kein SaaS
+- Keine Comunio-OAuth
+- Kein Magic Link im ersten Bau
+- Kein Multi-Tenant (eine Instanz = eine Gruppe)
 
 ## Abhängigkeiten & Reihenfolge
 
-- **Ideal vor dem Kader-Picker:** `SquadMembership` wird von Anfang an mit `user_id` geschrieben.
-- Geteilte Ligadaten (OpenLigaDB, Transfermarkt) bleiben unverändert.
-- V1.5 Konkurrenzvergleich profitiert später optional davon, dass mehrere echte User existieren — bleibt aber unabhängig (manuelle `CompetitorSquad` weiter möglich).
-
-Design-Details und festgehaltene Alternativen: `docs/superpowers/specs/2026-08-21-auth-gruppen-login-design.md`.
-
-## Abhängigkeiten
-
-- Directus Users / Roles / Permissions
-- Astro Middleware + Server-Session
-- Schema-Änderung `SquadMembership` + `UserProfile`
-- Anpassungen an `SECURITY.md` und Roadmap in `CLAUDE.md`
+- Hosting-Entscheidung: `spec-hosting-directus.md` (Self-Host, 1 Admin)
+- Ideal vor dem Kader-Picker: `mitglied_id` von Anfang an
+- Design: `docs/superpowers/specs/2026-08-21-auth-gruppen-login-design.md`  
+  und Hosting-Design: `docs/superpowers/specs/2026-08-21-directus-hosting-kostenfrei-design.md`
