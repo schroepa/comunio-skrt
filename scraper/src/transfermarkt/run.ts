@@ -20,16 +20,15 @@ const http = createHttpClient({
   userAgent: "comunio-helper/0.1 (private)",
 });
 
-const directus = createDirectusClient({
-  baseUrl: requiredEnv("DIRECTUS_URL"),
-  email: requiredEnv("DIRECTUS_EMAIL"),
-  password: requiredEnv("DIRECTUS_PASSWORD"),
+const catalog = createDirectusClient({
+  baseUrl: requiredEnv("SUPABASE_URL"),
+  serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
 });
 
-await directus.login();
+await catalog.login();
 const now = new Date();
-const werte = await syncTransfermarktWerte({ http, directus, now });
-const verfuegbarkeit = await syncTransfermarktVerfuegbarkeit({ http, directus, now });
+const werte = await syncTransfermarktWerte({ http, directus: catalog, now });
+const verfuegbarkeit = await syncTransfermarktVerfuegbarkeit({ http, directus: catalog, now });
 
 if (werte.status === "success") {
   log.info(`transfermarkt-werte sync ok, written=${werte.written} skipped=${werte.skipped}`);

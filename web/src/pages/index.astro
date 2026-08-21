@@ -1,5 +1,4 @@
 ---
-import { DIRECTUS_URL } from "astro:env/server";
 import DeadlineCountdown from "../components/DeadlineCountdown";
 import EmptyState from "../components/EmptyState.astro";
 import MatchList from "../components/MatchList.astro";
@@ -18,20 +17,21 @@ import { getNextMatchday } from "../lib/fixtures";
 import { budgetRemaining, squadValue } from "../lib/money";
 import Shell from "../layouts/Shell.astro";
 
-const { user, accessToken } = Astro.locals;
+const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
+const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
 const now = new Date();
 
 const [load, players, squad, ratings, profile] = await Promise.all([
-  listFixtures({ url: DIRECTUS_URL, token: accessToken }),
-  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
-  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
-  listRatings({ url: DIRECTUS_URL, token: accessToken }),
-  getManagerProfile({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
+  listFixtures(db),
+  listPlayers(db),
+  listSquad({ ...db, userId: user.id }),
+  listRatings(db),
+  getManagerProfile({ ...db, userId: user.id }),
 ]);
 
 const scheduleError =
   !load.ok
-    ? "Directus nicht erreichbar. In `directus/` `docker compose up -d`."
+      ? "Supabase nicht erreichbar."
     : load.ok && load.fixtures.length === 0
       ? "Noch kein Spielplan. Im Ordner `scraper/` `npm run sync:openligadb`."
       : null;
@@ -40,7 +40,7 @@ const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixt
 const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === false;
 const spieltag = matchday?.spieltag ?? 1;
 const availability = load.ok
-  ? await listAvailability({ url: DIRECTUS_URL, token: accessToken, spieltag })
+  ? await listAvailability({ ...db, spieltag })
   : [];
 
 const playerById = new Map(players.map((player) => [player.id, player]));

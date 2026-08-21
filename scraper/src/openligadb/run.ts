@@ -19,16 +19,15 @@ const http = createHttpClient({
   userAgent: "comunio-helper/0.1 (private)",
 });
 
-const directus = createDirectusClient({
-  baseUrl: requiredEnv("DIRECTUS_URL"),
-  email: requiredEnv("DIRECTUS_EMAIL"),
-  password: requiredEnv("DIRECTUS_PASSWORD"),
+const catalog = createDirectusClient({
+  baseUrl: requiredEnv("SUPABASE_URL"),
+  serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
 });
 
-await directus.login();
+await catalog.login();
 const result = await syncOpenLigaDb({
   http,
-  directus,
+  directus: catalog,
   league: process.env.OPENLIGADB_LEAGUE ?? "bl1",
   season: Number(process.env.OPENLIGADB_SEASON ?? "2026"),
 });

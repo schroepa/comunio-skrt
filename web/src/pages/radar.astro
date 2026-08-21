@@ -1,5 +1,4 @@
 ---
-import { DIRECTUS_URL } from "astro:env/server";
 import EmptyState from "../components/EmptyState.astro";
 import { Badge } from "../components/ui/badge";
 import { radarRows } from "../lib/catalog";
@@ -7,20 +6,21 @@ import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } f
 import { getNextMatchday } from "../lib/fixtures";
 import Shell from "../layouts/Shell.astro";
 
-const { user, accessToken } = Astro.locals;
+const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
+const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
 const position = Astro.url.searchParams.get("position") ?? "";
 const onlySquad = Astro.url.searchParams.get("kader") === "1";
 const q = Astro.url.searchParams.get("q") ?? "";
 
 const [load, players, squad, ratings] = await Promise.all([
-  listFixtures({ url: DIRECTUS_URL, token: accessToken }),
-  listPlayers({ url: DIRECTUS_URL, token: accessToken }),
-  listSquad({ url: DIRECTUS_URL, token: accessToken, userId: user.id }),
-  listRatings({ url: DIRECTUS_URL, token: accessToken }),
+  listFixtures(db),
+  listPlayers(db),
+  listSquad({ ...db, userId: user.id }),
+  listRatings(db),
 ]);
 const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, new Date()) : null;
 const spieltag = matchday?.spieltag ?? 1;
-const availability = await listAvailability({ url: DIRECTUS_URL, token: accessToken, spieltag });
+const availability = await listAvailability({ ...db, spieltag });
 const squadIds = new Set(squad.map((row) => row.player_id));
 let rows = radarRows(players, squadIds, ratings, availability, load.ok ? load.fixtures : [], spieltag);
 if (position) rows = rows.filter((row) => row.player.position === position);

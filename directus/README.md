@@ -1,6 +1,8 @@
-# Directus-Setup (Datenpipeline Phase 1)
+# Directus-Setup (nicht mehr der Happy Path)
 
-Lokales Directus-Backend (SQLite) für den Comunio Assistant. Siehe `../docs/spec-datenpipeline.md` für den vollständigen Kontext.
+Die App und der Scraper nutzen **Supabase**. Anleitung: [`../supabase/README.md`](../supabase/README.md). Dieser Ordner bleibt vorerst als Altlast.
+
+Lokales Directus-Backend (SQLite). Siehe `../docs/spec-datenpipeline.md` für den historischen Kontext.
 
 ## Starten
 

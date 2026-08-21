@@ -5,9 +5,9 @@ Persönliches Tool für bis zu acht eingeladene Freunde (getrennte Comunio-Ligen
 
 ## Tech-Stack
 - Frontend: Astro + React (Islands) + Tailwind + shadcn/ui, gehostet auf Vercel
-- Backend/Datenschicht: Directus self-hosted (Docker; nicht Community-Cloud für 8 Endnutzer)
-- Scraper: CLI, schreibt über die Directus-REST-API (Admin-Account). Nicht für Freunde.
-- Auth: Directus-User, Rolle `manager`, httpOnly-Session in der Astro-App
+- Backend/Datenschicht: Supabase (Postgres + Auth, Region `eu-central-1`). Schema in `supabase/migrations/`
+- Scraper: CLI, schreibt über PostgREST mit Service Role. Nicht für Freunde.
+- Auth: Supabase Email+Passwort, Sign-ups aus, httpOnly-Session in der Astro-App
 - Repo: GitHub, Deployment über Vercel-GitHub-Integration
 
 ## Datenmodell (Kern-Entitäten)
@@ -15,7 +15,7 @@ Persönliches Tool für bis zu acht eingeladene Freunde (getrennte Comunio-Ligen
 - **ValueHistory**: player_id, datum, marktwert
 - **RatingHistory**: player_id, spieltag, note, minuten_gespielt
 - **Fixture**: spieltag, heim_verein, auswaerts_verein, datum
-- **SquadMembership**: player_id, user_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell, isoliert pro User
+- **squad_membership**: player_id, user_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell, isoliert per RLS (`user_id = auth.uid()`)
 - **ManagerProfile**: user_id, budget
 - **AvailabilityStatus**: player_id, spieltag, status (fit / fraglich / verletzt / gesperrt), quelle, aktualisiert_am
 - **CompetitorSquad**: user_id, competitor_name, player_id — 2–3 Rivalen der eigenen Liga, nicht die App-Freunde
@@ -56,4 +56,5 @@ docs/
   spec-konkurrenzvergleich.md ← fertig (leicht: V1.5, voll: V2)
   spec-aufstellung.md        ← V2
   spec-punkteprognose.md     ← V2
+supabase/                    ← SQL + RLS, README zum Anlegen des Projekts
 ```

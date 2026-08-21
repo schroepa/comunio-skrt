@@ -4,11 +4,11 @@ Dieses Repository ist ein **persönliches Ein-Nutzer-Tool**. Es gibt keine öffe
 
 ## Was nicht ins Repo gehört
 
-- Directus-Admin-Passwort, Static Tokens, `SECRET`
-- `directus/.env`, `scraper/.env`, `web/.env` (stehen in `.gitignore`)
+- Supabase Service Role, JWT secrets
+- `scraper/.env`, `web/.env` (stehen in `.gitignore`)
 
 Gefundene Secrets in Issues oder einer Mail an den Repo-Owner (`schroepa`). Keine Tokens in Ticket-Texten zitieren.
 
 ## Erwartetes Modell
 
-Die Web-App spricht Directus nur **serverseitig** mit einem Static Token an (`DIRECTUS_TOKEN`, nie `PUBLIC_*`). Der Scraper nutzt Admin-Login lokal, nicht im Browser.
+Die Web-App spricht Supabase nur **serverseitig** mit dem **anon** Key plus User-JWT (`SUPABASE_ANON_KEY`, nie Service Role). Der Scraper nutzt den Service Role lokal, nicht im Browser und nicht auf Vercel.

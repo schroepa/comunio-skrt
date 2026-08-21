@@ -6,7 +6,7 @@ Produkt-Specs liegen hier im Repo, nicht im Wiki. Implementierungspläne und Des
 
 | Spec | Thema | Status |
 |---|---|---|
-| [spec-datenpipeline.md](spec-datenpipeline.md) | Quellen, Directus, Scraper-Phasen, CSV-Fallback | Phase 1–4 gebaut (Schema, OpenLigaDB, Transfermarkt, Kicker-CLI). Cron/CSV folgen |
+| [spec-datenpipeline.md](spec-datenpipeline.md) | Quellen, Schema, Scraper-Phasen, CSV-Fallback | Phase 1–4 gebaut. Datenschicht: Supabase |
 | [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert | Radar-UI + Formscore |
 | [spec-kader-check.md](spec-kader-check.md) | Warnungen vor der Deadline | auf User-Kader |
 | [spec-dashboard.md](spec-dashboard.md) | Budget, Deadline, Alerts, Top-Signale | mit Login und Kaderwert |
@@ -14,13 +14,13 @@ Produkt-Specs liegen hier im Repo, nicht im Wiki. Implementierungspläne und Des
 | [spec-aufstellung.md](spec-aufstellung.md) | Elf aus dem Kader | `/aufstellung` |
 | [spec-punkteprognose.md](spec-punkteprognose.md) | erwartete Punkte | Engine + Aufstellung |
 
-Auth/Hosting: [Freundes-Runde P0+P1, Design](superpowers/specs/2026-08-21-freundesrunde-auth-kader-design.md).
+Auth/Hosting: [Directus → Supabase](superpowers/specs/2026-08-21-directus-zu-supabase-design.md). Historisch: [Freundes-Runde P0+P1](superpowers/specs/2026-08-21-freundesrunde-auth-kader-design.md).
 
 ## Betrieb
 
 | Paket | README |
 |---|---|
-| Directus lokal | [../directus/README.md](../directus/README.md) |
+| Supabase | [../supabase/README.md](../supabase/README.md) |
 | Scraper CLI | [../scraper/README.md](../scraper/README.md) |
 | Web (Astro) | [../web/README.md](../web/README.md) |
 

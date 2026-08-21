@@ -1,23 +1,23 @@
 # Comunio Assistant — Web
 
-Astro-UI mit Login (Directus-User), eigenem Kader, Radar, Kader-Check, Konkurrenz und Aufstellung. Directus nur serverseitig.
+Astro-UI mit Login (Supabase-User), eigenem Kader, Radar, Kader-Check, Konkurrenz und Aufstellung. Supabase nur serverseitig.
 
 ## Voraussetzung
 
-Directus: `directus/` `docker compose up -d`, Schema apply, Rolle `manager` (`node --env-file=../directus/.env ../directus/scripts/ensure-manager-role.mjs` aus `web/` oder vom Repo-Root). User in Directus anlegen, Rolle `manager`.
+Supabase-Projekt nach [`../supabase/README.md`](../supabase/README.md): SQL ausführen, Sign-ups aus, User einladen.
 
 ## Start
 
-1. `cp .env.example .env` — `DIRECTUS_URL=http://localhost:8055`
+1. `cp .env.example .env` — `SUPABASE_URL` und `SUPABASE_ANON_KEY`
 2. `npm install`
 3. `npm run dev` → http://localhost:4321 → `/login`
 
-Kein Static Token mehr für die Seiten. `DIRECTUS_TOKEN` in `.env` ist ungenutzt (kann fehlen).
+Kein Service Role in dieser App.
 
 ## Deploy
 
-Adapter `@astrojs/vercel`. Auf Vercel `DIRECTUS_URL` auf die öffentliche Directus-HTTPS-URL setzen. Directus self-hosted (nicht Community-Cloud für 8 User).
+Adapter `@astrojs/vercel`. Auf Vercel dieselben zwei Variablen setzen (kein Service Role).
 
 ## Tests
 
-`npm test` — ohne Live-Directus.
+`npm test` — ohne Live-Supabase.

@@ -25,30 +25,40 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
+function authHeaders(anonKey: string, token?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    apikey: anonKey,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
 export async function loginWithPassword(options: {
   url: string;
+  anonKey: string;
   email: string;
   password: string;
   fetchImpl?: FetchLike;
 }): Promise<AuthResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = options.url.replace(/\/$/, "");
+  if (!base || !options.anonKey.trim()) return { ok: false, reason: "directus_unreachable" };
   try {
-    const response = await fetchImpl(`${base}/auth/login`, {
+    const response = await fetchImpl(`${base}/auth/v1/token?grant_type=password`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: authHeaders(options.anonKey),
       body: JSON.stringify({ email: options.email, password: options.password }),
       signal: AbortSignal.timeout(8000),
     });
-    if (response.status === 401) return { ok: false, reason: "invalid_credentials" };
+    if (response.status === 400 || response.status === 401) return { ok: false, reason: "invalid_credentials" };
     if (!response.ok) return { ok: false, reason: "directus_unreachable" };
-    const body = (await readJson(response)) as { data?: { access_token?: unknown; refresh_token?: unknown } };
-    const access = body?.data?.access_token;
-    const refresh = body?.data?.refresh_token;
-    if (typeof access !== "string" || typeof refresh !== "string") {
+    const body = (await readJson(response)) as { access_token?: unknown; refresh_token?: unknown };
+    if (typeof body?.access_token !== "string" || typeof body.refresh_token !== "string") {
       return { ok: false, reason: "directus_unreachable" };
     }
-    return { ok: true, tokens: { access_token: access, refresh_token: refresh } };
+    return { ok: true, tokens: { access_token: body.access_token, refresh_token: body.refresh_token } };
   } catch {
     return { ok: false, reason: "directus_unreachable" };
   }
@@ -56,20 +66,21 @@ export async function loginWithPassword(options: {
 
 export async function fetchMe(options: {
   url: string;
+  anonKey: string;
   token: string;
   fetchImpl?: FetchLike;
 }): Promise<SessionUser | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = options.url.replace(/\/$/, "");
   try {
-    const response = await fetchImpl(`${base}/users/me`, {
-      headers: { Authorization: `Bearer ${options.token}`, Accept: "application/json" },
+    const response = await fetchImpl(`${base}/auth/v1/user`, {
+      headers: authHeaders(options.anonKey, options.token),
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) return null;
-    const body = (await readJson(response)) as { data?: { id?: unknown; email?: unknown } };
-    if (typeof body?.data?.id !== "string" || typeof body.data.email !== "string") return null;
-    return { id: body.data.id, email: body.data.email };
+    const body = (await readJson(response)) as { id?: unknown; email?: unknown };
+    if (typeof body?.id !== "string" || typeof body.email !== "string") return null;
+    return { id: body.id, email: body.email };
   } catch {
     return null;
   }
@@ -77,22 +88,23 @@ export async function fetchMe(options: {
 
 export async function refreshTokens(options: {
   url: string;
+  anonKey: string;
   refreshToken: string;
   fetchImpl?: FetchLike;
 }): Promise<DirectusTokens | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = options.url.replace(/\/$/, "");
   try {
-    const response = await fetchImpl(`${base}/auth/refresh`, {
+    const response = await fetchImpl(`${base}/auth/v1/token?grant_type=refresh_token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ refresh_token: options.refreshToken, mode: "json" }),
+      headers: authHeaders(options.anonKey),
+      body: JSON.stringify({ refresh_token: options.refreshToken }),
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) return null;
-    const body = (await readJson(response)) as { data?: { access_token?: unknown; refresh_token?: unknown } };
-    if (typeof body?.data?.access_token !== "string" || typeof body.data.refresh_token !== "string") return null;
-    return { access_token: body.data.access_token, refresh_token: body.data.refresh_token };
+    const body = (await readJson(response)) as { access_token?: unknown; refresh_token?: unknown };
+    if (typeof body?.access_token !== "string" || typeof body.refresh_token !== "string") return null;
+    return { access_token: body.access_token, refresh_token: body.refresh_token };
   } catch {
     return null;
   }

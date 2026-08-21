@@ -4,5 +4,7 @@ declare namespace App {
   interface Locals {
     user: { id: string; email: string };
     accessToken: string;
+    supabaseUrl: string;
+    supabaseAnonKey: string;
   }
 }

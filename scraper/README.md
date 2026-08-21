@@ -1,6 +1,6 @@
 # Scraper (Datenpipeline Phase 2–3)
 
-Eigenständiges Node-Paket. Directus bleibt die einzige Quelle der Wahrheit; dieses Paket schreibt nur.
+Eigenständiges Node-Paket. Supabase (Postgres) ist die Quelle der Wahrheit; dieses Paket schreibt per Service Role.
 
 Datenquellen:
 
@@ -11,14 +11,14 @@ Datenquellen:
 ## Voraussetzungen
 
 - Node.js 22+
-- Laufendes Directus aus `../directus` (`docker compose up -d`)
+- Supabase-Projekt mit ausgeführter Migration (`../supabase/README.md`)
 
 ## Setup
 
 ```bash
 cd scraper
 cp .env.example .env
-# DIRECTUS_EMAIL / DIRECTUS_PASSWORD aus directus/.env übernehmen
+# SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY setzen
 npm install
 ```
 
@@ -32,7 +32,7 @@ Default: Liga `bl1`, Saison `2026` (Saison 2026/27). Überschreiben über `OPENL
 
 `Fixture` enthält immer genau eine Saison. Vor einem Saisonwechsel muss die Collection vollständig geleert werden; andernfalls werden Spiele verschiedener Saisons vermischt. Insbesondere darf der in Task 5 verwendete Fallback `OPENLIGADB_SEASON=2025` nicht gegen eine bereits mit Saison 2026 befüllte `Fixture`-Collection laufen.
 
-Danach im Directus-Admin (http://localhost:8055): Collection `Fixture` (≈306 Zeilen) und `ScrapeLog` (ein `success`-Eintrag mit `quelle=openligadb`) stichprobenartig prüfen.
+Danach in Supabase Table Editor: `fixture` (≈306 Zeilen) und `scrape_log` (ein `success`-Eintrag mit `quelle=openligadb`) stichprobenartig prüfen.
 
 Rohantworten liegen unter `.cache/` (TTL 12 Stunden) und werden nicht versioniert.
 
@@ -48,7 +48,7 @@ Live-URLs (Stand 2026-08-21): Kader `https://www.transfermarkt.de/-/kader/verein
 
 `TRANSFERMARKT_MIN_DELAY_MS` (Default `1500`) steuert den Mindestabstand zwischen Live-HTTP-Requests. User-Agent bleibt `comunio-helper/0.1 (private)`.
 
-Danach im Directus-Admin prüfen:
+Danach in Supabase prüfen:
 
 - `Player`: 360–700 Zeilen, Feld `transfermarkt_id` gesetzt
 - `ValueHistory`: Stichprobe für das Laufdatum

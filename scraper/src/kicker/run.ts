@@ -17,13 +17,12 @@ const http = createHttpClient({
   userAgent: "comunio-helper/0.1 (private)",
 });
 
-const directus = createDirectusClient({
-  baseUrl: requiredEnv("DIRECTUS_URL"),
-  email: requiredEnv("DIRECTUS_EMAIL"),
-  password: requiredEnv("DIRECTUS_PASSWORD"),
+const catalog = createDirectusClient({
+  baseUrl: requiredEnv("SUPABASE_URL"),
+  serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
 });
 
-await directus.login();
+await catalog.login();
 const spieltag = process.env.KICKER_SPIELTAG ? Number(process.env.KICKER_SPIELTAG) : undefined;
 const season = process.env.KICKER_SEASON ?? "2026-27";
 const matchday = spieltag ?? 1;
@@ -33,7 +32,7 @@ const notesUrl =
 
 const result = await syncKicker({
   http,
-  directus,
+  directus: catalog,
   now: new Date(),
   notesUrl,
   spieltag,

@@ -18,12 +18,12 @@ export default defineConfig({
 
   env: {
     schema: {
-      DIRECTUS_URL: envField.string({
+      SUPABASE_URL: envField.string({
         context: "server",
         access: "secret",
-        default: "http://localhost:8055",
+        optional: true,
       }),
-      DIRECTUS_TOKEN: envField.string({
+      SUPABASE_ANON_KEY: envField.string({
         context: "server",
         access: "secret",
         optional: true,

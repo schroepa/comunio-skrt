@@ -1,5 +1,13 @@
 import type { FixtureRecord } from "./fixtures";
 
+export type CatalogAuth = {
+  url: string;
+  anonKey: string;
+  token: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+};
+
 export type FixtureLoadResult =
   | { ok: true; fixtures: FixtureRecord[] }
   | { ok: false; reason: "missing_token" | "directus_unreachable" };
@@ -21,51 +29,74 @@ function isFixtureRecord(value: unknown): value is FixtureRecord {
   );
 }
 
-export async function listFixtures(options: {
-  url: string;
-  token: string;
-  fetchImpl?: typeof fetch;
-  timeoutMs?: number;
-}): Promise<FixtureLoadResult> {
-  const token = options.token.trim();
-  if (!token) return { ok: false, reason: "missing_token" };
+function restHeaders(anonKey: string, token: string): Record<string, string> {
+  return {
+    apikey: anonKey,
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Prefer: "return=representation",
+  };
+}
 
+async function getItems<T>(options: CatalogAuth & { path: string }): Promise<T[] | null> {
+  const token = options.token.trim();
+  const anonKey = options.anonKey.trim();
+  if (!token || !anonKey) return null;
   const fetchImpl = options.fetchImpl ?? fetch;
   const base = options.url.replace(/\/$/, "");
-  const url = `${base}/items/Fixture?limit=-1&sort=datum`;
-
   try {
-    const response = await fetchImpl(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
+    const response = await fetchImpl(`${base}${options.path}`, {
+      headers: restHeaders(anonKey, token),
       signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
+    if (!response.ok) return null;
+    const body = (await response.json()) as unknown;
+    return Array.isArray(body) ? (body as T[]) : null;
+  } catch {
+    return null;
+  }
+}
 
-    if (!response.ok) {
-      console.error(`Directus HTTP ${response.status} for GET /items/Fixture`);
+async function mutateItem(options: CatalogAuth & { path: string; method: string; body?: object }): Promise<boolean> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const base = options.url.replace(/\/$/, "");
+  try {
+    const response = await fetchImpl(`${base}${options.path}`, {
+      method: options.method,
+      headers: restHeaders(options.anonKey, options.token),
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function listFixtures(options: CatalogAuth): Promise<FixtureLoadResult> {
+  const token = options.token.trim();
+  if (!token || !options.anonKey.trim()) return { ok: false, reason: "missing_token" };
+
+  try {
+    const rows = await getItems<unknown>({
+      ...options,
+      path: "/rest/v1/fixture?select=spieltag,heim_verein,auswaerts_verein,datum&order=datum.asc&limit=10000",
+    });
+    if (rows == null) {
+      console.error("Supabase HTTP error for GET /rest/v1/fixture");
       return { ok: false, reason: "directus_unreachable" };
     }
-
-    const body = (await response.json()) as { data?: unknown };
-    if (!Array.isArray(body.data)) {
-      console.error("Directus Fixture response missing data array");
-      return { ok: false, reason: "directus_unreachable" };
-    }
-
-    const fixtures = body.data.filter(isFixtureRecord).map((row) => ({
+    const fixtures = rows.filter(isFixtureRecord).map((row) => ({
       spieltag: row.spieltag,
       heim_verein: row.heim_verein,
       auswaerts_verein: row.auswaerts_verein,
       datum: row.datum,
     }));
-
     return { ok: true, fixtures };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Directus Fixture request failed: ${message}`);
+    console.error(`Supabase Fixture request failed: ${message}`);
     return { ok: false, reason: "directus_unreachable" };
   }
 }
@@ -110,56 +141,6 @@ export type CompetitorRow = {
   player_id: number;
 };
 
-async function getItems<T>(options: {
-  url: string;
-  token: string;
-  path: string;
-  fetchImpl?: typeof fetch;
-}): Promise<T[] | null> {
-  const token = options.token.trim();
-  if (!token) return null;
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const base = options.url.replace(/\/$/, "");
-  try {
-    const response = await fetchImpl(`${base}${options.path}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    });
-    if (!response.ok) return null;
-    const body = (await response.json()) as { data?: unknown };
-    return Array.isArray(body.data) ? (body.data as T[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function mutateItem(options: {
-  url: string;
-  token: string;
-  path: string;
-  method: string;
-  body?: object;
-  fetchImpl?: typeof fetch;
-}): Promise<boolean> {
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const base = options.url.replace(/\/$/, "");
-  try {
-    const response = await fetchImpl(`${base}${options.path}`, {
-      method: options.method,
-      headers: {
-        Authorization: `Bearer ${options.token}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
 function isPlayer(value: unknown): value is PlayerRecord {
   if (typeof value !== "object" || value === null) return false;
   const row = value as Record<string, unknown>;
@@ -172,36 +153,31 @@ function isPlayer(value: unknown): value is PlayerRecord {
   );
 }
 
-export async function listPlayers(options: { url: string; token: string; search?: string; fetchImpl?: typeof fetch }) {
+export async function listPlayers(options: CatalogAuth & { search?: string }) {
   const filter = options.search?.trim()
-    ? `&filter[name][_icontains]=${encodeURIComponent(options.search.trim())}`
+    ? `&name=ilike.*${encodeURIComponent(options.search.trim())}*`
     : "";
-  const limit = options.search?.trim() ? "80" : "-1";
+  const limit = options.search?.trim() ? "80" : "10000";
   const rows = await getItems<unknown>({
     ...options,
-    path: `/items/Player?limit=${limit}&sort=name${filter}&fields=id,name,position,verein,aktueller_marktwert`,
+    path: `/rest/v1/player?select=id,name,position,verein,aktueller_marktwert&order=name.asc&limit=${limit}${filter}`,
   });
   return (rows ?? []).filter(isPlayer);
 }
 
-export async function listSquad(options: { url: string; token: string; userId: string; fetchImpl?: typeof fetch }) {
-  const rows = await getItems<SquadRow>({
-    ...options,
-    path: `/items/SquadMembership?limit=-1&filter[user_id][_eq]=${encodeURIComponent(options.userId)}&filter[im_kader][_eq]=true`,
-  });
-  return rows ?? [];
+export async function listSquad(options: CatalogAuth & { userId: string }) {
+  return (
+    (await getItems<SquadRow>({
+      ...options,
+      path: `/rest/v1/squad_membership?select=id,player_id,im_kader,kaufpreis&user_id=eq.${encodeURIComponent(options.userId)}&im_kader=eq.true&limit=10000`,
+    })) ?? []
+  );
 }
 
-export async function addToSquad(options: {
-  url: string;
-  token: string;
-  userId: string;
-  playerId: number;
-  fetchImpl?: typeof fetch;
-}) {
+export async function addToSquad(options: CatalogAuth & { userId: string; playerId: number }) {
   return mutateItem({
     ...options,
-    path: "/items/SquadMembership",
+    path: "/rest/v1/squad_membership",
     method: "POST",
     body: {
       user_id: options.userId,
@@ -212,89 +188,70 @@ export async function addToSquad(options: {
   });
 }
 
-export async function removeFromSquad(options: {
-  url: string;
-  token: string;
-  membershipId: number;
-  fetchImpl?: typeof fetch;
-}) {
+export async function removeFromSquad(options: CatalogAuth & { membershipId: number }) {
   return mutateItem({
     ...options,
-    path: `/items/SquadMembership/${options.membershipId}`,
+    path: `/rest/v1/squad_membership?id=eq.${options.membershipId}`,
     method: "DELETE",
   });
 }
 
-export async function getManagerProfile(options: { url: string; token: string; userId: string; fetchImpl?: typeof fetch }) {
+export async function getManagerProfile(options: CatalogAuth & { userId: string }) {
   const rows = await getItems<ManagerProfileRecord>({
     ...options,
-    path: `/items/ManagerProfile?limit=1&filter[user_id][_eq]=${encodeURIComponent(options.userId)}`,
+    path: `/rest/v1/manager_profile?select=id,user_id,budget&user_id=eq.${encodeURIComponent(options.userId)}&limit=1`,
   });
   return rows?.[0] ?? null;
 }
 
-export async function saveBudget(options: {
-  url: string;
-  token: string;
-  userId: string;
-  budget: number;
-  profileId?: number;
-  fetchImpl?: typeof fetch;
-}) {
+export async function saveBudget(options: CatalogAuth & { userId: string; budget: number; profileId?: number }) {
   if (options.profileId) {
     return mutateItem({
       ...options,
-      path: `/items/ManagerProfile/${options.profileId}`,
+      path: `/rest/v1/manager_profile?id=eq.${options.profileId}`,
       method: "PATCH",
       body: { budget: options.budget },
     });
   }
   return mutateItem({
     ...options,
-    path: "/items/ManagerProfile",
+    path: "/rest/v1/manager_profile",
     method: "POST",
     body: { user_id: options.userId, budget: options.budget },
   });
 }
 
-export async function listRatings(options: { url: string; token: string; fetchImpl?: typeof fetch }) {
+export async function listRatings(options: CatalogAuth) {
   return (
     (await getItems<RatingRecord>({
       ...options,
-      path: "/items/RatingHistory?limit=-1&sort=-spieltag",
+      path: "/rest/v1/rating_history?select=player_id,spieltag,note,minuten_gespielt&order=spieltag.desc&limit=10000",
     })) ?? []
   );
 }
 
-export async function listAvailability(options: { url: string; token: string; spieltag: number; fetchImpl?: typeof fetch }) {
+export async function listAvailability(options: CatalogAuth & { spieltag: number }) {
   return (
     (await getItems<AvailabilityRecord>({
       ...options,
-      path: `/items/AvailabilityStatus?limit=-1&filter[spieltag][_eq]=${options.spieltag}`,
+      path: `/rest/v1/availability_status?select=player_id,spieltag,status&spieltag=eq.${options.spieltag}&limit=10000`,
     })) ?? []
   );
 }
 
-export async function listCompetitors(options: { url: string; token: string; userId: string; fetchImpl?: typeof fetch }) {
+export async function listCompetitors(options: CatalogAuth & { userId: string }) {
   return (
     (await getItems<CompetitorRow>({
       ...options,
-      path: `/items/CompetitorSquad?limit=-1&filter[user_id][_eq]=${encodeURIComponent(options.userId)}`,
+      path: `/rest/v1/competitor_squad?select=id,competitor_name,player_id&user_id=eq.${encodeURIComponent(options.userId)}&limit=10000`,
     })) ?? []
   );
 }
 
-export async function addCompetitor(options: {
-  url: string;
-  token: string;
-  userId: string;
-  competitorName: string;
-  playerId: number;
-  fetchImpl?: typeof fetch;
-}) {
+export async function addCompetitor(options: CatalogAuth & { userId: string; competitorName: string; playerId: number }) {
   return mutateItem({
     ...options,
-    path: "/items/CompetitorSquad",
+    path: "/rest/v1/competitor_squad",
     method: "POST",
     body: {
       user_id: options.userId,
@@ -304,16 +261,10 @@ export async function addCompetitor(options: {
   });
 }
 
-export async function removeCompetitor(options: {
-  url: string;
-  token: string;
-  id: number;
-  fetchImpl?: typeof fetch;
-}) {
+export async function removeCompetitor(options: CatalogAuth & { id: number }) {
   return mutateItem({
     ...options,
-    path: `/items/CompetitorSquad/${options.id}`,
+    path: `/rest/v1/competitor_squad?id=eq.${options.id}`,
     method: "DELETE",
   });
 }
-

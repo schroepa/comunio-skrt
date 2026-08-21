@@ -7,10 +7,11 @@ afterEach(() => {
 });
 
 describe("loginWithPassword", () => {
-  it("maps 401 to invalid_credentials", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+  it("maps 400 to invalid_credentials", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({}) });
     const result = await loginWithPassword({
-      url: "http://localhost:8055",
+      url: "https://example.supabase.co",
+      anonKey: "anon",
       email: "a@b.c",
       password: "x",
       fetchImpl: fetchImpl as unknown as typeof fetch,
@@ -22,14 +23,18 @@ describe("loginWithPassword", () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ data: { access_token: "a", refresh_token: "r" } }),
+      json: async () => ({ access_token: "a", refresh_token: "r" }),
     });
     const result = await loginWithPassword({
-      url: "http://localhost:8055/",
+      url: "https://example.supabase.co/",
+      anonKey: "anon",
       email: "a@b.c",
       password: "x",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     expect(result).toEqual({ ok: true, tokens: { access_token: "a", refresh_token: "r" } });
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      "https://example.supabase.co/auth/v1/token?grant_type=password",
+    );
   });
 });

@@ -1,6 +1,6 @@
 ---
 import "../styles/global.css";
-import { DIRECTUS_URL } from "astro:env/server";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "astro:env/server";
 import { ACCESS_COOKIE, REFRESH_COOKIE, loginWithPassword } from "../lib/session";
 
 let error: string | null = null;
@@ -9,7 +9,12 @@ if (Astro.request.method === "POST") {
   const form = await Astro.request.formData();
   const email = String(form.get("email") ?? "");
   const password = String(form.get("password") ?? "");
-  const result = await loginWithPassword({ url: DIRECTUS_URL, email, password });
+  const result = await loginWithPassword({
+    url: SUPABASE_URL ?? "",
+    anonKey: SUPABASE_ANON_KEY ?? "",
+    email,
+    password,
+  });
   if (result.ok) {
     const secure = Astro.url.protocol === "https:";
     const opts = { httpOnly: true, path: "/", sameSite: "lax" as const, secure };
@@ -20,7 +25,7 @@ if (Astro.request.method === "POST") {
   error =
     result.reason === "invalid_credentials"
       ? "E-Mail oder Passwort stimmt nicht."
-      : "Directus nicht erreichbar. In `directus/` `docker compose up -d`.";
+      : "Supabase nicht erreichbar.";
 }
 ---
 <html lang="de" class="dark">

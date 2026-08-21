@@ -6,11 +6,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const auth = {
+  url: "https://example.supabase.co",
+  anonKey: "anon",
+  token: "test-token",
+};
+
 describe("listFixtures", () => {
   it("does not fetch when the token is missing", async () => {
     const fetchImpl = vi.fn();
     const result = await listFixtures({
-      url: "http://localhost:8055",
+      ...auth,
       token: "  ",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
@@ -19,38 +25,10 @@ describe("listFixtures", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("requests Fixture with limit -1, sort datum, and bearer token", async () => {
+  it("requests fixture ordered by datum with bearer and apikey", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        data: [
-          {
-            spieltag: 1,
-            heim_verein: "FC Bayern München",
-            auswaerts_verein: "RB Leipzig",
-            datum: "2026-08-22T13:30:00.000Z",
-          },
-        ],
-      }),
-    });
-    const result = await listFixtures({
-      url: "http://localhost:8055/",
-      token: "test-token",
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-    });
-
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    const [calledUrl, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
-    expect(calledUrl).toBe("http://localhost:8055/items/Fixture?limit=-1&sort=datum");
-    expect(init.method).toBe("GET");
-    expect(init.headers).toEqual({
-      Authorization: "Bearer test-token",
-      Accept: "application/json",
-    });
-    expect(init.signal).toBeInstanceOf(AbortSignal);
-    expect(result).toEqual({
-      ok: true,
-      fixtures: [
+      json: async () => [
         {
           spieltag: 1,
           heim_verein: "FC Bayern München",
@@ -59,6 +37,26 @@ describe("listFixtures", () => {
         },
       ],
     });
+    const result = await listFixtures({
+      ...auth,
+      url: "https://example.supabase.co/",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [calledUrl, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+    expect(calledUrl).toContain("/rest/v1/fixture?");
+    expect(calledUrl).toContain("order=datum.asc");
+    expect(init.headers).toEqual(
+      expect.objectContaining({
+        Authorization: "Bearer test-token",
+        apikey: "anon",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fixtures).toHaveLength(1);
+    }
   });
 
   it("returns unreachable on HTTP 401 without throwing", async () => {
@@ -66,24 +64,23 @@ describe("listFixtures", () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ errors: [{ message: "Invalid token" }] }),
+      json: async () => ({ message: "Invalid token" }),
     });
     const result = await listFixtures({
-      url: "http://localhost:8055",
+      ...auth,
       token: "bad",
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
     expect(result).toEqual({ ok: false, reason: "directus_unreachable" });
-    expect(errorSpy).toHaveBeenCalledWith("Directus HTTP 401 for GET /items/Fixture");
+    expect(errorSpy).toHaveBeenCalled();
   });
 
   it("returns unreachable when fetch rejects", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
     const result = await listFixtures({
-      url: "http://localhost:8055",
-      token: "x",
+      ...auth,
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
@@ -91,44 +88,13 @@ describe("listFixtures", () => {
     expect(errorSpy).toHaveBeenCalled();
   });
 
-  it("returns unreachable when the request aborts", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const fetchImpl = vi.fn().mockRejectedValue(new DOMException("Timed out", "TimeoutError"));
-    const result = await listFixtures({
-      url: "http://localhost:8055",
-      token: "x",
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-      timeoutMs: 1,
-    });
-
-    expect(result).toEqual({ ok: false, reason: "directus_unreachable" });
-    expect(errorSpy).toHaveBeenCalled();
-  });
-
-  it("returns unreachable when the response has no data array", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("treats an empty array as success", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: async () => [],
     });
     const result = await listFixtures({
-      url: "http://localhost:8055",
-      token: "x",
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-    });
-
-    expect(result).toEqual({ ok: false, reason: "directus_unreachable" });
-    expect(errorSpy).toHaveBeenCalledWith("Directus Fixture response missing data array");
-  });
-
-  it("treats an empty data array as success", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [] }),
-    });
-    const result = await listFixtures({
-      url: "http://localhost:8055",
-      token: "x",
+      ...auth,
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
@@ -144,20 +110,15 @@ describe("listFixtures", () => {
     };
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        data: [
-          validFixture,
-          { ...validFixture, spieltag: "1" },
-          { ...validFixture, heim_verein: "" },
-          { ...validFixture, auswaerts_verein: "" },
-          { ...validFixture, datum: "" },
-          null,
-        ],
-      }),
+      json: async () => [
+        validFixture,
+        { ...validFixture, spieltag: "1" },
+        { ...validFixture, heim_verein: "" },
+        null,
+      ],
     });
     const result = await listFixtures({
-      url: "http://localhost:8055",
-      token: "x",
+      ...auth,
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 

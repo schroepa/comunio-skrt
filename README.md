@@ -12,7 +12,7 @@ Repo auf GitHub: [`schroepa/comunio-skrt`](https://github.com/schroepa/comunio-s
 
 | Bereich | Status |
 |---|---|
-| Directus-Schema (Player, Fixture, Kader inkl. `user_id`, Rivalen, …) | da |
+| Supabase-Schema (player, fixture, Kader inkl. `user_id`, Rivalen, RLS) | SQL im Repo |
 | Spielplan über OpenLigaDB → `Fixture` | da |
 | Transfermarkt-Katalog, Marktwerte, Verfügbarkeit → `Player` | da |
 | Login + eigener Kader (`/kader`) | da |
@@ -31,62 +31,58 @@ flowchart LR
   end
   subgraph Repo
     S[scraper/]
-    D[directus/]
+    SB[supabase/]
     W[web/]
   end
   OL -->|REST, ODbL| S
   TM -->|niedrigfrequent| S
   K -->|niedrigfrequent| S
-  S -->|REST, Admin| D
-  W -->|SSR, User-Token| D
+  S -->|PostgREST, Service Role| SB
+  W -->|SSR, User-JWT| SB
 ```
 
-- **`web/`** — Astro 7, React-Islands, Tailwind, shadcn/ui. Session-Cookie, Directus nur serverseitig.
-- **`directus/`** — SQLite (Docker), self-hosted. Rolle `manager` für App-User.
-- **`scraper/`** — CLI, Admin-Login. OpenLigaDB, Transfermarkt, Kicker.
+- **`web/`** — Astro 7, React-Islands, Tailwind, shadcn/ui. Session-Cookie, Supabase nur serverseitig (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+- **`supabase/`** — SQL-Migration + RLS. Projekt legst du im Dashboard an.
+- **`scraper/`** — CLI, Service Role. OpenLigaDB, Transfermarkt, Kicker.
+- **`directus/`** — alt, nicht mehr der Happy Path.
 
 ## Schnellstart
 
-Voraussetzung: Node.js 22.19+, Docker.
+Voraussetzung: Node.js 22.19+. Supabase-Projekt siehe [`supabase/README.md`](supabase/README.md).
 
 ```bash
-# 1. Directus
-cd directus
-cp .env.example .env   # SECRET, ADMIN_EMAIL, ADMIN_PASSWORD setzen
-docker compose up -d
-docker compose exec directus npx directus schema apply --yes ./schema/snapshot.yaml
-node --env-file=.env scripts/ensure-manager-role.mjs
+# 1. SQL aus supabase/migrations/ im SQL Editor ausführen, User einladen
 
 # 2. Daten holen
-cd ../scraper
-cp .env.example .env   # DIRECTUS_EMAIL / DIRECTUS_PASSWORD aus directus/.env
+cd scraper
+cp .env.example .env   # SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
 npm install
 npm run sync:openligadb
 npm run sync:transfermarkt
 
 # 3. UI
 cd ../web
-cp .env.example .env   # DIRECTUS_URL
+cp .env.example .env   # SUPABASE_URL + SUPABASE_ANON_KEY
 npm install
 npm run dev            # http://localhost:4321 → /login
 ```
 
-User in Directus anlegen, Rolle **manager**. Kein Static Token für die App.
+Kein Service Role in der Web-App oder auf Vercel.
 
-Details: [`directus/README.md`](directus/README.md), [`scraper/README.md`](scraper/README.md), [`web/README.md`](web/README.md).
+Details: [`supabase/README.md`](supabase/README.md), [`scraper/README.md`](scraper/README.md), [`web/README.md`](web/README.md).
 
 ## Datenmodell
 
-| Collection | Zweck | Pflege |
+| Tabelle | Zweck | Pflege |
 |---|---|---|
-| `Player` | Katalog: Name, Position, Verein, Marktwert, `transfermarkt_id` | Scraper |
-| `ValueHistory` | Marktwert über die Zeit | Scraper |
-| `RatingHistory` | Kicker-Note, Minuten | folgt (kicker) |
-| `Fixture` | Spieltag, Teams, Kickoff | Scraper (OpenLigaDB) |
-| `AvailabilityStatus` | fit / fraglich / verletzt / gesperrt je Spieltag | Scraper |
-| `SquadMembership` | eigener Kader, Kaufpreis | **immer manuell** |
-| `CompetitorSquad` | 2–3 Liga-Rivalen | manuell, später |
-| `ScrapeLog` | Erfolg/Fehler je Quelle | Scraper |
+| `player` | Katalog: Name, Position, Verein, Marktwert, `transfermarkt_id` | Scraper |
+| `value_history` | Marktwert über die Zeit | Scraper |
+| `rating_history` | Kicker-Note, Minuten | Scraper (`sync:kicker`) |
+| `fixture` | Spieltag, Teams, Kickoff | Scraper (OpenLigaDB) |
+| `availability_status` | fit / fraglich / verletzt / gesperrt je Spieltag | Scraper |
+| `squad_membership` | eigener Kader, Kaufpreis | **immer manuell** |
+| `competitor_squad` | 2–3 Liga-Rivalen | manuell |
+| `scrape_log` | Erfolg/Fehler je Quelle | Scraper |
 
 ## Datenquellen
 
@@ -108,13 +104,11 @@ Kein rechtlicher Rat. Transfermarkt-ToS (§11.1) untersagt Scraping; das ist ein
 3. Kader-Check vor der Deadline — [`docs/spec-kader-check.md`](docs/spec-kader-check.md)
 4. Dashboard als Klammer — [`docs/spec-dashboard.md`](docs/spec-dashboard.md)
 
-Als Nächstes in der UI: Kader-Picker (Suche in `Player`, Schreiben von `SquadMembership`), danach Radar an den Katalog anschließen. Formscore braucht Kicker-Noten.
-
 **V1.5** Konkurrenz-Vergleich (leicht). **V2** Aufstellung, Punkteprognose, voller Konkurrenz-Vergleich.
 
 ### Nicht in V1
 
-Kein Multi-User, keine Comunio-Login-Anbindung, keine Punkteprognose, keine automatische Aufstellungsoptimierung.
+Keine öffentliche Registrierung, keine Comunio-Login-Anbindung.
 
 ## Doku-Index
 
