@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Produkt-Specs und Stand
+    url: https://github.com/schroepa/comunio-skrt/blob/main/docs/README.md
+    about: Was gebaut ist, was Stub ist, und welche Spec gilt.
+  - name: Datenpipeline (Scraper + Directus)
+    url: https://github.com/schroepa/comunio-skrt/blob/main/docs/spec-datenpipeline.md
+    about: Quellen, Collections, Phasen — bevor ein Daten-Issue aufgemacht wird.

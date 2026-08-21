@@ -1,0 +1,32 @@
+name: Fehler
+description: Etwas in der lokalen App, am Scraper oder am Schema stimmt nicht.
+title: "[fix] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Persönliches Tool — kurz halten. Keine Tokens oder `.env`-Inhalte einfügen.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - web
+        - scraper
+        - directus
+        - docs
+        - anderes
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartet
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächlich
+    validations:
+      required: true
