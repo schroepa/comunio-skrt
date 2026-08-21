@@ -1,0 +1,34 @@
+---
+import type { FixtureRecord } from "../lib/fixtures";
+
+interface Props {
+  spieltag: number;
+  fixtures: FixtureRecord[];
+}
+const { spieltag, fixtures } = Astro.props;
+const fmt = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Berlin",
+});
+---
+<section class="space-y-3">
+  <h2 class="font-[Syne] text-xl">Nächste Spiele · Spieltag {spieltag}</h2>
+  <ul class="divide-y divide-border rounded-lg border border-border">
+    {fixtures.map((match) => (
+      <li class="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          {match.heim_verein}
+          <span class="text-muted-foreground"> – </span>
+          {match.auswaerts_verein}
+        </span>
+        <time class="text-sm text-muted-foreground" datetime={match.datum}>
+          {fmt.format(new Date(match.datum))}
+        </time>
+      </li>
+    ))}
+  </ul>
+</section>
