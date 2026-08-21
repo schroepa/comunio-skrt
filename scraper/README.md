@@ -1,6 +1,11 @@
-# Scraper (Datenpipeline Phase 2)
+# Scraper (Datenpipeline Phase 2–3)
 
-Eigenständiges Node-Paket. Datenquelle dieser Phase: [OpenLigaDB](https://www.openligadb.de/) (ODbL — Namensnennung). Directus bleibt die einzige Quelle der Wahrheit; dieses Paket schreibt nur.
+Eigenständiges Node-Paket. Directus bleibt die einzige Quelle der Wahrheit; dieses Paket schreibt nur.
+
+Datenquellen:
+
+- [OpenLigaDB](https://www.openligadb.de/) (ODbL — Namensnennung) für den Spielplan
+- [transfermarkt.de](https://www.transfermarkt.de/) für Spielerkatalog, Marktwerte und Verfügbarkeit — private, niedrigfrequente Nutzung; bei HTTP 403 den Lauf abbrechen, die Sperre nicht umgehen
 
 ## Voraussetzungen
 
@@ -30,14 +35,35 @@ Danach im Directus-Admin (http://localhost:8055): Collection `Fixture` (≈306 Z
 
 Rohantworten liegen unter `.cache/` (TTL 12 Stunden) und werden nicht versioniert.
 
+## Transfermarkt-Katalog, Marktwerte und Verfügbarkeit
+
+```bash
+npm run sync:transfermarkt
+```
+
+Läuft nacheinander: zuerst Marktwerte (`Player` upsert über `transfermarkt_id`, `ValueHistory` für das Laufdatum), dann Verfügbarkeit (`AvailabilityStatus` für den nächsten Spieltag aus `Fixture`). Exit-Code 0 nur wenn **beide** Teile `success` sind. Marktwerte können geschrieben bleiben, auch wenn Verfügbarkeit fehlschlägt (dann Exit 1).
+
+Live-URLs (Stand 2026-08-21): Kader `https://www.transfermarkt.de/-/kader/verein/{id}` und Verfügbarkeit `https://www.transfermarkt.de/bundesliga/sperrenausfaelle/wettbewerb/L1` plus `verletztespieler`. Die Plan-Pfade `/kader/verein/{id}` und `sperrenspieler` liefern auf der aktuellen Transfermarkt-Seite 404. Der Sync nutzt dieselben privaten UA `comunio-helper/0.1 (private)` — das ist keine Umgehung einer HTTP-403-Sperre.
+
+`TRANSFERMARKT_MIN_DELAY_MS` (Default `1500`) steuert den Mindestabstand zwischen Live-HTTP-Requests. User-Agent bleibt `comunio-helper/0.1 (private)`.
+
+Danach im Directus-Admin prüfen:
+
+- `Player`: 360–700 Zeilen, Feld `transfermarkt_id` gesetzt
+- `ValueHistory`: Stichprobe für das Laufdatum
+- `AvailabilityStatus`: Stichprobe für den nächsten Spieltag (`quelle=transfermarkt`)
+- `ScrapeLog`: zwei Zeilen, `quelle=transfermarkt-werte` und `quelle=transfermarkt-verfuegbarkeit`
+
+Ist `Fixture` leer, schlägt nur der Verfügbarkeitsteil fehl — zuerst `npm run sync:openligadb` ausführen.
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Parser-Tests verwenden nur `tests/fixtures/`, nicht die Live-API.
+Parser-Tests verwenden nur `tests/fixtures/`, nicht die Live-API und nicht Live-Transfermarkt.
 
 ## Noch nicht in dieser Phase
 
-Cron-Zeitplan, CSV-Fallback, transfermarkt.de, kicker.de — siehe `../docs/spec-datenpipeline.md`.
+Cron-Zeitplan, CSV-Fallback, kicker.de — siehe `../docs/spec-datenpipeline.md`.

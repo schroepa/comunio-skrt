@@ -2,17 +2,23 @@
   "name": "comunio-helper-scraper",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "npm run typecheck && vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts"
+    "sync:openligadb": "tsx --env-file=.env src/openligadb/run.ts",
+    "sync:transfermarkt": "tsx --env-file=.env src/transfermarkt/run.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
   }
 }

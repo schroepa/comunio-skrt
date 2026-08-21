@@ -197,4 +197,27 @@ describe("createHttpClient", () => {
 
     expect(sleep).toHaveBeenCalledWith(150);
   });
+
+  it("fetches HTML text on cache miss with Accept text/html", async () => {
+    await setup();
+    const fetchImpl = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response("<table></table>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+    );
+    const client = createHttpClient({
+      cacheDir: dir,
+      ttlMs: 60_000,
+      minDelayMs: 0,
+      userAgent: "test-agent",
+      fetchImpl,
+      now: () => 1_000,
+    });
+    const body = await client.getText("https://example.test/page");
+    expect(body).toBe("<table></table>");
+    const request = fetchImpl.mock.calls[0][0] as Request;
+    expect(request.headers.get("Accept")).toBe("text/html");
+  });
 });

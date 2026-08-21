@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 export type HttpClient = {
   getJson<T>(url: string): Promise<T>;
+  getText(url: string): Promise<string>;
 };
 
 export type HttpClientOptions = {
@@ -33,7 +34,12 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
   let lastLiveAt = 0;
   let liveQueue: Promise<unknown> = Promise.resolve();
 
-  async function liveFetch<T>(url: string, file: string): Promise<T> {
+  async function liveFetch<T>(
+    url: string,
+    file: string,
+    accept: string,
+    parse: (response: Response) => Promise<T>,
+  ): Promise<T> {
     const wait = lastLiveAt + options.minDelayMs - now();
     if (wait > 0) await sleep(wait);
 
@@ -43,7 +49,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
         new Request(url, {
           headers: {
             "User-Agent": userAgent,
-            Accept: "application/json",
+            Accept: accept,
           },
         }),
       );
@@ -53,30 +59,41 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} for ${url}`);
     }
-    const body = (await response.json()) as T;
+    const body = await parse(response);
     await writeFile(file, JSON.stringify({ storedAt: now(), body }), "utf8");
     return body;
   }
 
-  return {
-    async getJson<T>(url: string): Promise<T> {
-      await mkdir(options.cacheDir, { recursive: true });
-      const file = cachePath(options.cacheDir, url);
-      try {
-        const cached = JSON.parse(await readFile(file, "utf8")) as {
-          storedAt: number;
-          body: T;
-        };
-        if (now() - cached.storedAt < options.ttlMs) return cached.body;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-          /* corrupt cache: fall through to live fetch */
-        }
+  async function getCachedOrLive<T>(
+    url: string,
+    accept: string,
+    parse: (response: Response) => Promise<T>,
+  ): Promise<T> {
+    await mkdir(options.cacheDir, { recursive: true });
+    const file = cachePath(options.cacheDir, url);
+    try {
+      const cached = JSON.parse(await readFile(file, "utf8")) as {
+        storedAt: number;
+        body: T;
+      };
+      if (now() - cached.storedAt < options.ttlMs) return cached.body;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        /* corrupt cache: fall through to live fetch */
       }
+    }
 
-      const result = liveQueue.then(() => liveFetch<T>(url, file));
-      liveQueue = result.catch(() => undefined);
-      return result;
+    const result = liveQueue.then(() => liveFetch(url, file, accept, parse));
+    liveQueue = result.catch(() => undefined);
+    return result;
+  }
+
+  return {
+    getJson<T>(url: string): Promise<T> {
+      return getCachedOrLive(url, "application/json", (response) => response.json() as Promise<T>);
+    },
+    getText(url: string): Promise<string> {
+      return getCachedOrLive(url, "text/html", (response) => response.text());
     },
   };
 }

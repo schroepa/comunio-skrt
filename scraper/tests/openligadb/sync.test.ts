@@ -57,6 +57,9 @@ function mockHttpJson(body: unknown) {
       urls.push(url);
       return body as T;
     },
+    async getText(): Promise<string> {
+      throw new Error("getText is not used by OpenLigaDB");
+    },
   };
   return { client, urls };
 }
@@ -108,6 +111,9 @@ describe("syncOpenLigaDb", () => {
     const http: HttpClient = {
       async getJson<T>(): Promise<T> {
         throw new Error("HTTP 403 for https://api.openligadb.de/getmatchdata/bl1/2025");
+      },
+      async getText(): Promise<string> {
+        throw new Error("getText is not used by OpenLigaDB");
       },
     };
     const result = await syncOpenLigaDb({
