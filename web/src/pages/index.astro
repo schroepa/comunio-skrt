@@ -61,7 +61,7 @@ const showCountdown = Boolean(matchday?.deadline) && matchday?.seasonOver === fa
         ) : showCountdown && matchday?.deadline ? (
           <DeadlineCountdown client:load deadlineIso={matchday.deadline.toISOString()} />
         ) : (
-          scheduleError && <EmptyState body={scheduleError} />
+          <p>Keine Deadline ableitbar.</p>
         )}
       </CardContent>
     </Card>

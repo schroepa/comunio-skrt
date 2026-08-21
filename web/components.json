@@ -10,7 +10,7 @@
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "lucide",
+  "iconLibrary": "iconoir",
   "rtl": false,
   "aliases": {
     "components": "@/components",
