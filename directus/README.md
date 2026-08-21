@@ -20,4 +20,4 @@ Nach einem `git pull` dasselbe `schema apply --yes` ausführen, damit neue Felde
 
 ## Collections
 
-`Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus`, `SquadMembership` (siehe `../CLAUDE.md`), plus `ScrapeLog` (siehe `../docs/spec-datenpipeline.md`, Abschnitt „Architektur").
+`Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus`, `SquadMembership` (siehe `../CLAUDE.md`), plus `ScrapeLog` (siehe `../docs/spec-datenpipeline.md`, Abschnitt „Architektur"). Ab V1.25 zusätzlich `UserProfile` und `SquadMembership.user_id` (siehe `../docs/spec-auth.md`) — noch nicht im Snapshot.

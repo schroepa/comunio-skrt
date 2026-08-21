@@ -10,6 +10,7 @@ Produkt-Specs liegen hier im Repo, nicht im Wiki. Implementierungspläne und Des
 | [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert, Filter, Badges | Spec fertig, UI noch Stub |
 | [spec-kader-check.md](spec-kader-check.md) | Warnungen vor der Deadline (verletzt/gesperrt/Rotation) | Spec fertig, UI noch Stub |
 | [spec-dashboard.md](spec-dashboard.md) | Budget, Deadline, Alerts, Top-Signale | Shell + Spielplan/Deadline; Rest Leerzustände |
+| [spec-auth.md](spec-auth.md) | Invite-only Login für die Comunio-Gruppe | Spec + Design fertig, Implementierung offen |
 
 Geplant, Datei noch nicht im Repo: `spec-konkurrenzvergleich.md` (V1.5/V2), `spec-aufstellung.md` (V2), `spec-punkteprognose.md` (V2).
 
@@ -25,6 +26,7 @@ Geplant, Datei noch nicht im Repo: `spec-konkurrenzvergleich.md` (V1.5/V2), `spe
 
 Ausführliche SDD-Artefakte (nicht die Produkt-Specs):
 
+- [Gruppen-Login, Design](superpowers/specs/2026-08-21-auth-gruppen-login-design.md)
 - [Frontend-Dashboard-Shell, Design](superpowers/specs/2026-08-21-frontend-dashboard-shell-design.md)
 - [Frontend-Dashboard-Shell, Plan](superpowers/plans/2026-08-21-frontend-dashboard-shell.md)
 - [Datenpipeline Phase 1](superpowers/plans/2026-08-20-datenpipeline-phase1-fundament.md)

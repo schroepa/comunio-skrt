@@ -1,7 +1,7 @@
 # Comunio Assistant – Projekt-Kontext
 
 ## Ziel
-Persönliches Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt, Aufstellung, Punkteprognose). Comunio bietet keine offizielle API – die Datenbasis kommt aus öffentlich zugänglichen Quellen (Marktwerte, Spielernoten, Spielpläne) sowie aus der manuellen Pflege des eigenen Kaders, da Comunio den eigenen Kaderstand nicht herausgibt.
+Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt, Aufstellung, Punkteprognose) — zunächst persönlich, ab V1.25 für die eigene Comunio-Gruppe (Invite-only). Comunio bietet keine offizielle API – die Datenbasis kommt aus öffentlich zugänglichen Quellen (Marktwerte, Spielernoten, Spielpläne) sowie aus der manuellen Pflege des eigenen Kaders, da Comunio den eigenen Kaderstand nicht herausgibt.
 
 ## Tech-Stack
 - Frontend: Astro + React (Islands) + Tailwind + shadcn/ui, gehostet auf Vercel
@@ -14,9 +14,10 @@ Persönliches Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt,
 - **ValueHistory**: player_id, datum, marktwert
 - **RatingHistory**: player_id, spieltag, note, minuten_gespielt
 - **Fixture**: spieltag, heim_verein, auswaerts_verein, datum
-- **SquadMembership**: player_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell gepflegt
+- **SquadMembership**: user_id, player_id, im_kader (bool), kaufpreis, hinzugefuegt_am — manuell gepflegt, pro eingeloggtem User
+- **UserProfile** *(neu, V1.25)*: user_id, anzeigename, budget_uebrig, liga_name (optional) — ein Profil pro Mitglied
 - **AvailabilityStatus** *(neu)*: player_id, spieltag, status (fit / fraglich / verletzt / gesperrt), quelle, aktualisiert_am — spieltagsbezogen, da sich der Status wöchentlich ändert
-- **CompetitorSquad** *(neu)*: competitor_name, player_id — manuell gepflegt, begrenzt auf 2–3 engste Liga-Rivalen
+- **CompetitorSquad** *(neu)*: user_id, competitor_name, player_id — manuell gepflegt, begrenzt auf 2–3 engste Liga-Rivalen, scoped pro User
 
 ## Roadmap
 
@@ -25,6 +26,9 @@ Persönliches Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt,
 2. Spieler-Radar / Transfermarkt-Analyse → `docs/spec-transfermarkt.md`
 3. Kader-Check vor Spieltag-Deadline → `docs/spec-kader-check.md`
 4. Dashboard (Klammer über 2+3: Budget, Deadline, Alerts) → `docs/spec-dashboard.md`
+
+**V1.25 — Gruppen-Login (Invite-only)**
+- Freunde der Comunio-Gruppe melden sich an; eigener Kader/Budget, geteilte Ligadaten → `docs/spec-auth.md`
 
 **V1.5 — Konkurrenz-Vergleich (leicht)**
 - Nutzt vorhandenen Formscore, keine Abhängigkeit zur Punkteprognose → `docs/spec-konkurrenzvergleich.md`
@@ -36,7 +40,7 @@ Persönliches Tool zur Unterstützung bei Comunio-Entscheidungen (Transfermarkt,
 
 ## Nicht-Ziele für V1
 - Keine Punkteprognose-Engine (V2)
-- Kein Multi-User/Auth (persönliches Tool, ein Nutzer)
+- Kein öffentliches Signup / kein Multi-Tenant (V1.25 = Invite-only für eine Liga-Gruppe, siehe `docs/spec-auth.md`)
 - Keine direkte Comunio-Integration (technisch nicht möglich)
 - Keine automatische Aufstellungsoptimierung (V2)
 
@@ -52,7 +56,8 @@ docs/
   spec-transfermarkt.md      ← fertig
   spec-kader-check.md        ← fertig
   spec-dashboard.md          ← fertig
-  spec-konkurrenzvergleich.md ← fertig (leicht: V1.5, voll: V2)
+  spec-auth.md               ← fertig (V1.25 Gruppen-Login)
+  spec-konkurrenzvergleich.md ← folgt (leicht: V1.5, voll: V2)
   spec-aufstellung.md        ← folgt (V2)
   spec-punkteprognose.md     ← folgt (V2)
 ```
