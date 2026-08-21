@@ -1,0 +1,3 @@
+{$DIRECTUS_DOMAIN} {
+	reverse_proxy directus:8055
+}

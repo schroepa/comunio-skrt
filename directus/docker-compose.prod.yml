@@ -1,0 +1,38 @@
+services:
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      DIRECTUS_DOMAIN: ${DIRECTUS_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - directus
+
+  directus:
+    image: directus/directus:12.0.2
+    restart: unless-stopped
+    expose:
+      - 8055
+    volumes:
+      - ./database:/directus/database
+      - ./uploads:/directus/uploads
+      - ./extensions:/directus/extensions
+      - ./schema:/directus/schema
+    environment:
+      SECRET: ${SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DB_CLIENT: sqlite3
+      DB_FILENAME: /directus/database/data.db
+      PUBLIC_URL: ${PUBLIC_URL}
+      WEBSOCKETS_ENABLED: "false"
+
+volumes:
+  caddy_data:
+  caddy_config:
