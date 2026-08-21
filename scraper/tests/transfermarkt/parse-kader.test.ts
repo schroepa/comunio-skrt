@@ -32,6 +32,32 @@ describe("parseKader", () => {
     ]);
   });
 
+  it("keeps a later complete row when the first row for that id lacks position or marktwert", () => {
+    const html = `
+      <table>
+        <tr>
+          <td><a href="/manuel-neuer/profil/spieler/17259">Manuel Neuer</a></td>
+        </tr>
+        <tr>
+          <td><a href="/manuel-neuer/profil/spieler/17259">Manuel Neuer</a></td>
+          <td>Torwart</td>
+          <td>4,00 Mio. €</td>
+        </tr>
+      </table>
+    `;
+    const result = parseKader(html, "FC Bayern München");
+    expect(result.skipped).toBe(1);
+    expect(result.players).toEqual([
+      {
+        transfermarkt_id: 17259,
+        name: "Manuel Neuer",
+        position: "Torwart",
+        verein: "FC Bayern München",
+        aktueller_marktwert: 4_000_000,
+      },
+    ]);
+  });
+
   it("keeps the first row for a duplicate transfermarkt_id", () => {
     const html = `
       <table>

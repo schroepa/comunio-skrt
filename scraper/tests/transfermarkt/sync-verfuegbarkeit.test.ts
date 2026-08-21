@@ -149,7 +149,7 @@ describe("syncTransfermarktVerfuegbarkeit", () => {
       directus: client,
       now: NOW,
     });
-    expect(result).toEqual({ status: "success", written: 2 });
+    expect(result).toEqual({ status: "success", written: 2, skipped: 0 });
     expect(updated).toContainEqual({
       collection: "AvailabilityStatus",
       id: 3,
@@ -187,6 +187,176 @@ describe("syncTransfermarktVerfuegbarkeit", () => {
     });
   });
 
+  it("resets leftover transfermarkt availability for this spieltag to fit", async () => {
+    const { client, created, updated, fixtures, players, availability } = mockDirectus();
+    fixtures.push({
+      id: 1,
+      spieltag: 2,
+      heim_verein: "Heim",
+      auswaerts_verein: "Auswaerts",
+      datum: "2026-08-22T15:30:00",
+    });
+    players.push(
+      { id: 7, transfermarkt_id: 132098 },
+      { id: 9, transfermarkt_id: 999 },
+      { id: 10, transfermarkt_id: 1000 },
+    );
+    availability.push(
+      {
+        id: 3,
+        player_id: 7,
+        spieltag: 2,
+        status: "verletzt",
+        quelle: "transfermarkt",
+        aktualisiert_am: "2026-08-20T10:00:00.000Z",
+      },
+      {
+        id: 4,
+        player_id: 9,
+        spieltag: 2,
+        status: "verletzt",
+        quelle: "transfermarkt",
+        aktualisiert_am: "2026-08-20T10:00:00.000Z",
+      },
+      {
+        id: 5,
+        player_id: 9,
+        spieltag: 1,
+        status: "verletzt",
+        quelle: "transfermarkt",
+        aktualisiert_am: "2026-08-13T10:00:00.000Z",
+      },
+      {
+        id: 6,
+        player_id: 10,
+        spieltag: 2,
+        status: "verletzt",
+        quelle: "manual",
+        aktualisiert_am: "2026-08-20T10:00:00.000Z",
+      },
+    );
+    const listedOnlyKane = `
+      <table>
+        <tr>
+          <td><a href="/harry-kane/profil/spieler/132098">Harry Kane</a></td>
+          <td>Wadenverletzung</td>
+        </tr>
+      </table>
+    `;
+    const http = mockHttp({
+      [INJURED_URL]: listedOnlyKane,
+      [SUSPENDED_URL]: "<table></table>",
+    });
+    const result = await syncTransfermarktVerfuegbarkeit({
+      http: http.client,
+      directus: client,
+      now: NOW,
+    });
+    expect(result.status).toBe("success");
+    expect(result.written).toBe(1);
+    expect(updated).toContainEqual({
+      collection: "AvailabilityStatus",
+      id: 3,
+      payload: {
+        player_id: 7,
+        spieltag: 2,
+        status: "verletzt",
+        quelle: "transfermarkt",
+        aktualisiert_am: NOW.toISOString(),
+      },
+    });
+    expect(updated).toContainEqual({
+      collection: "AvailabilityStatus",
+      id: 4,
+      payload: {
+        player_id: 9,
+        spieltag: 2,
+        status: "fit",
+        quelle: "transfermarkt",
+        aktualisiert_am: NOW.toISOString(),
+      },
+    });
+    expect(updated.filter((row) => row.id === 5)).toHaveLength(0);
+    expect(updated.filter((row) => row.id === 6)).toHaveLength(0);
+    expect(created.filter((row) => row.collection === "AvailabilityStatus")).toHaveLength(0);
+    expect(updated.filter((row) => row.payload.status === "fit")).toHaveLength(1);
+  });
+
+  it("fails when no listed player matches the catalog, without resetting to fit", async () => {
+    const { client, created, updated, logs, fixtures, players, availability } = mockDirectus();
+    fixtures.push({
+      id: 1,
+      spieltag: 1,
+      heim_verein: "Heim",
+      auswaerts_verein: "Auswaerts",
+      datum: "2026-08-22T15:30:00",
+    });
+    players.push({ id: 9, transfermarkt_id: 999 });
+    availability.push({
+      id: 4,
+      player_id: 9,
+      spieltag: 1,
+      status: "verletzt",
+      quelle: "transfermarkt",
+      aktualisiert_am: "2026-08-20T10:00:00.000Z",
+    });
+    const http = mockHttp({
+      [INJURED_URL]: kaneInjuredHtml,
+      [SUSPENDED_URL]: kaneSuspendedHtml,
+    });
+    const result = await syncTransfermarktVerfuegbarkeit({
+      http: http.client,
+      directus: client,
+      now: NOW,
+    });
+    expect(result.status).toBe("failed");
+    expect(result.written).toBe(0);
+    expect(result.error).toBe("kein gelisteter Spieler im Katalog");
+    expect(updated).toHaveLength(0);
+    expect(created.filter((row) => row.collection === "AvailabilityStatus")).toHaveLength(0);
+    expect(logs).toEqual([
+      expect.objectContaining({
+        quelle: "transfermarkt-verfuegbarkeit",
+        status: "failed",
+        fehlermeldung: "kein gelisteter Spieler im Katalog",
+      }),
+    ]);
+  });
+
+  it("returns skipped count from availability parse", async () => {
+    const { client, fixtures, players } = mockDirectus();
+    fixtures.push({
+      id: 1,
+      spieltag: 1,
+      heim_verein: "Heim",
+      auswaerts_verein: "Auswaerts",
+      datum: "2026-08-22T15:30:00",
+    });
+    players.push({ id: 7, transfermarkt_id: 132098 });
+    const injuredWithSkip = `
+      <table>
+        <tr>
+          <td><a href="/unbekannt/profil/spieler/">Ohne ID</a></td>
+          <td>Wadenverletzung</td>
+        </tr>
+        <tr>
+          <td><a href="/harry-kane/profil/spieler/132098">Harry Kane</a></td>
+          <td>Wadenverletzung</td>
+        </tr>
+      </table>
+    `;
+    const http = mockHttp({
+      [INJURED_URL]: injuredWithSkip,
+      [SUSPENDED_URL]: "<table></table>",
+    });
+    const result = await syncTransfermarktVerfuegbarkeit({
+      http: http.client,
+      directus: client,
+      now: NOW,
+    });
+    expect(result).toEqual({ status: "success", written: 1, skipped: 1 });
+  });
+
   it("skips unknown transfermarkt ids that are not in the player catalog", async () => {
     const { client, created, fixtures, players } = mockDirectus();
     fixtures.push({
@@ -206,7 +376,7 @@ describe("syncTransfermarktVerfuegbarkeit", () => {
       directus: client,
       now: NOW,
     });
-    expect(result).toEqual({ status: "success", written: 1 });
+    expect(result).toEqual({ status: "success", written: 1, skipped: 0 });
     expect(created.filter((row) => row.collection === "AvailabilityStatus")).toEqual([
       {
         collection: "AvailabilityStatus",

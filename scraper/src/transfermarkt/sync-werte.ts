@@ -18,6 +18,7 @@ export type SyncDeps = {
 export type SyncResult = {
   status: "success" | "failed";
   written: number;
+  skipped: number;
   error?: string;
 };
 
@@ -56,13 +57,15 @@ export async function syncTransfermarktWerte(deps: SyncDeps): Promise<SyncResult
         fehlermeldung: reason,
         ...logOpts,
       });
-      return { status: "failed", written: 0, error: reason };
+      return { status: "failed", written: 0, skipped: 0, error: reason };
     }
 
     const byId = new Map<number, ParsedPlayer>();
+    let skipped = 0;
     for (const club of clubs) {
       const html = await deps.http.getText(kaderUrl(club.transfermarkt_verein_id));
       const parsed = parseKader(html, club.name);
+      skipped += parsed.skipped;
       for (const player of parsed.players) {
         if (!byId.has(player.transfermarkt_id)) {
           byId.set(player.transfermarkt_id, player);
@@ -79,7 +82,7 @@ export async function syncTransfermarktWerte(deps: SyncDeps): Promise<SyncResult
         fehlermeldung: valid.reason,
         ...logOpts,
       });
-      return { status: "failed", written: 0, error: valid.reason };
+      return { status: "failed", written: 0, skipped, error: valid.reason };
     }
 
     const existingPlayers = await deps.directus.listItems<StoredPlayer>("Player", {
@@ -133,7 +136,7 @@ export async function syncTransfermarktWerte(deps: SyncDeps): Promise<SyncResult
       fehlermeldung: null,
       ...logOpts,
     });
-    return { status: "success", written };
+    return { status: "success", written, skipped };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await writeScrapeLog(deps.directus, {
@@ -142,6 +145,6 @@ export async function syncTransfermarktWerte(deps: SyncDeps): Promise<SyncResult
       fehlermeldung: message,
       ...logOpts,
     });
-    return { status: "failed", written: 0, error: message };
+    return { status: "failed", written: 0, skipped: 0, error: message };
   }
 }

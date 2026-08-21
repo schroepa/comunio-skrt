@@ -37,7 +37,6 @@ export function parseKader(
       skipped += 1;
       return;
     }
-    seen.add(transfermarkt_id);
 
     let position: DirectusPosition | null = null;
     let marktwert: number | null = null;
@@ -65,6 +64,7 @@ export function parseKader(
       verein,
       aktueller_marktwert: marktwert,
     });
+    seen.add(transfermarkt_id);
   });
 
   return { players, skipped };

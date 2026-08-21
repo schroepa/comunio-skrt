@@ -32,13 +32,15 @@ const werte = await syncTransfermarktWerte({ http, directus, now });
 const verfuegbarkeit = await syncTransfermarktVerfuegbarkeit({ http, directus, now });
 
 if (werte.status === "success") {
-  log.info(`transfermarkt-werte sync ok, written=${werte.written}`);
+  log.info(`transfermarkt-werte sync ok, written=${werte.written} skipped=${werte.skipped}`);
 } else {
   log.error(`transfermarkt-werte sync failed: ${werte.error}`);
 }
 
 if (verfuegbarkeit.status === "success") {
-  log.info(`transfermarkt-verfuegbarkeit sync ok, written=${verfuegbarkeit.written}`);
+  log.info(
+    `transfermarkt-verfuegbarkeit sync ok, written=${verfuegbarkeit.written} skipped=${verfuegbarkeit.skipped}`,
+  );
 } else {
   log.error(`transfermarkt-verfuegbarkeit sync failed: ${verfuegbarkeit.error}`);
 }

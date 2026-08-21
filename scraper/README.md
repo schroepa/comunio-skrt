@@ -43,6 +43,8 @@ npm run sync:transfermarkt
 
 Läuft nacheinander: zuerst Marktwerte (`Player` upsert über `transfermarkt_id`, `ValueHistory` für das Laufdatum), dann Verfügbarkeit (`AvailabilityStatus` für den nächsten Spieltag aus `Fixture`). Exit-Code 0 nur wenn **beide** Teile `success` sind. Marktwerte können geschrieben bleiben, auch wenn Verfügbarkeit fehlschlägt (dann Exit 1).
 
+Live-URLs (Stand 2026-08-21): Kader `https://www.transfermarkt.de/-/kader/verein/{id}` und Verfügbarkeit `https://www.transfermarkt.de/bundesliga/sperrenausfaelle/wettbewerb/L1` plus `verletztespieler`. Die Plan-Pfade `/kader/verein/{id}` und `sperrenspieler` liefern auf der aktuellen Transfermarkt-Seite 404. Der Sync nutzt dieselben privaten UA `comunio-helper/0.1 (private)` — das ist keine Umgehung einer HTTP-403-Sperre.
+
 `TRANSFERMARKT_MIN_DELAY_MS` (Default `1500`) steuert den Mindestabstand zwischen Live-HTTP-Requests. User-Agent bleibt `comunio-helper/0.1 (private)`.
 
 Danach im Directus-Admin prüfen:

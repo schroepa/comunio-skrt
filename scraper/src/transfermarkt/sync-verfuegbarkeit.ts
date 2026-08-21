@@ -18,6 +18,7 @@ export type SyncDeps = {
 export type SyncResult = {
   status: "success" | "failed";
   written: number;
+  skipped: number;
   error?: string;
 };
 
@@ -54,7 +55,7 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
         fehlermeldung: reason,
         ...logOpts,
       });
-      return { status: "failed", written: 0, error: reason };
+      return { status: "failed", written: 0, skipped: 0, error: reason };
     }
 
     const injuredHtml = await deps.http.getText(TRANSFERMARKT_INJURED_URL);
@@ -68,7 +69,7 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
         fehlermeldung: reason,
         ...logOpts,
       });
-      return { status: "failed", written: 0, error: reason };
+      return { status: "failed", written: 0, skipped: parsed.skipped, error: reason };
     }
 
     const existingPlayers = await deps.directus.listItems<StoredPlayer>("Player", {
@@ -85,6 +86,7 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
     );
 
     const aktualisiertAm = now.toISOString();
+    const upsertedPlayerIds = new Set<number>();
     let written = 0;
 
     for (const row of parsed.rows) {
@@ -105,6 +107,31 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
         await deps.directus.createItem("AvailabilityStatus", payload);
       }
       written += 1;
+      upsertedPlayerIds.add(player.id);
+    }
+
+    if (written === 0) {
+      const reason = "kein gelisteter Spieler im Katalog";
+      await writeScrapeLog(deps.directus, {
+        quelle: "transfermarkt-verfuegbarkeit",
+        status: "failed",
+        fehlermeldung: reason,
+        ...logOpts,
+      });
+      return { status: "failed", written: 0, skipped: parsed.skipped, error: reason };
+    }
+
+    for (const row of existingAvailability) {
+      if (row.spieltag !== spieltag) continue;
+      if (row.quelle !== "transfermarkt") continue;
+      if (upsertedPlayerIds.has(row.player_id)) continue;
+      await deps.directus.updateItem("AvailabilityStatus", row.id, {
+        player_id: row.player_id,
+        spieltag,
+        status: "fit",
+        quelle: "transfermarkt",
+        aktualisiert_am: aktualisiertAm,
+      });
     }
 
     await writeScrapeLog(deps.directus, {
@@ -113,7 +140,7 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
       fehlermeldung: null,
       ...logOpts,
     });
-    return { status: "success", written };
+    return { status: "success", written, skipped: parsed.skipped };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await writeScrapeLog(deps.directus, {
@@ -122,6 +149,6 @@ export async function syncTransfermarktVerfuegbarkeit(deps: SyncDeps): Promise<S
       fehlermeldung: message,
       ...logOpts,
     });
-    return { status: "failed", written: 0, error: message };
+    return { status: "failed", written: 0, skipped: 0, error: message };
   }
 }

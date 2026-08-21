@@ -111,7 +111,7 @@ describe("syncTransfermarktWerte", () => {
       directus: client,
       now: NOW,
     });
-    expect(result).toEqual({ status: "success", written: 360 });
+    expect(result).toEqual({ status: "success", written: 360, skipped: 0 });
     expect(created.filter((row) => row.collection === "Player")).toHaveLength(360);
     expect(created.filter((row) => row.collection === "ValueHistory")).toHaveLength(360);
     expect(created).toContainEqual({
@@ -139,6 +139,26 @@ describe("syncTransfermarktWerte", () => {
     expect(http.urls).toHaveLength(1 + CLUB_COUNT);
     expect(listCalls).toContainEqual({ collection: "Player", query: { limit: "-1" } });
     expect(listCalls).toContainEqual({ collection: "ValueHistory", query: { limit: "-1" } });
+  });
+
+  it("returns skipped count from kader parse across clubs", async () => {
+    const { client } = mockDirectus();
+    const pages = validPages();
+    pages[kaderUrl(1)] = kaderHtml(1, PLAYERS_PER_CLUB).replace(
+      "</table>",
+      `<tr>
+        <td><a href="/x/profil/spieler/">Ohne ID</a></td>
+        <td>Torwart</td>
+        <td>1,00 Mio. €</td>
+      </tr></table>`,
+    );
+    const http = mockHttp(pages);
+    const result = await syncTransfermarktWerte({
+      http: http.client,
+      directus: client,
+      now: NOW,
+    });
+    expect(result).toEqual({ status: "success", written: 360, skipped: 1 });
   });
 
   it("updates an existing player and today's value history instead of duplicating them", async () => {
