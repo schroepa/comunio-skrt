@@ -27,7 +27,7 @@ const currentPath = Astro.url.pathname;
             <a href="/radar">Radar</a>
             <a href="/kader-check">Kader-Check</a>
           </nav>
-          <div class="absolute inset-0 has-[.liquid-nav]:static">
+          <div class="pointer-events-none absolute inset-0 has-[.liquid-nav]:pointer-events-auto has-[.liquid-nav]:static">
             <Nav client:only="react" currentPath={currentPath} />
           </div>
         </div>
