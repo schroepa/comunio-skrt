@@ -38,6 +38,8 @@ Haupt-Screen „Spieler-Radar":
 - Filter: Position, Preis-Range, „Nur mein Kader"-Toggle
 - Farbcodierung: Kaufen = grün, Verkaufen = rot, Halten = neutral, Beobachten = amber
 
+**Mobile:** nicht Teil dieses V1-Schnitts. Später eigene Layouts (eine Spalte, Filter als Sheet) — `docs/superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md`.
+
 ## Abhängigkeiten
 - Datenmodell: `Player`, `ValueHistory`, `RatingHistory`, `Fixture`, `AvailabilityStatus` (siehe `../CLAUDE.md`)
 - Teilt die Verfügbarkeits-/Robustheit-Prüfung mit `spec-kader-check.md`

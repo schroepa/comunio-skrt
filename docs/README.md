@@ -7,7 +7,7 @@ Produkt-Specs liegen hier im Repo, nicht im Wiki. Implementierungspläne und Des
 | Spec | Thema | Status |
 |---|---|---|
 | [spec-datenpipeline.md](spec-datenpipeline.md) | Quellen, Schema, Scraper-Phasen, CSV-Fallback | Phase 1–4 gebaut. Datenschicht: Supabase |
-| [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert | Radar-UI + Formscore |
+| [spec-transfermarkt.md](spec-transfermarkt.md) | Spieler-Radar: Form vs. Marktwert | Radar-UI + Formscore. Mobile: Later |
 | [spec-kader-check.md](spec-kader-check.md) | Warnungen vor der Deadline | auf User-Kader |
 | [spec-dashboard.md](spec-dashboard.md) | Budget, Deadline, Alerts, Top-Signale | mit Login und Kaderwert |
 | [spec-konkurrenzvergleich.md](spec-konkurrenzvergleich.md) | Rivalen der eigenen Liga (leicht) | `/konkurrenz` |
@@ -26,7 +26,7 @@ Auth/Hosting: [Directus → Supabase](superpowers/specs/2026-08-21-directus-zu-s
 
 ## Design- und Baupläne
 
-- [Freundes-Runde P0+P1, Design](superpowers/specs/2026-08-21-freundesrunde-auth-kader-design.md)
+- [Spielerübersicht + Mobile Later](superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md)
 - [Freundes-Runde P0+P1, Plan](superpowers/plans/2026-08-21-freundesrunde-auth-kader.md)
 - [Kicker/Radar/Kader-Check, Design](superpowers/specs/2026-08-21-kicker-radar-kadercheck-design.md)
 - [Frontend-Dashboard-Shell, Design](superpowers/specs/2026-08-21-frontend-dashboard-shell-design.md)

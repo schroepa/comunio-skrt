@@ -28,6 +28,8 @@ Output: Liste 11 IDs + Bank (übriger Kader) + Summe erwarteter Punkte + Formati
 - Button „Neu berechnen“ lädt die Seite neu (SSR).
 - Leer: „Kader ist zu klein für eine Elf“ oder Kader-Check-Hinweis wenn alle TW blockiert sind.
 
+**Mobile (Later):** Spielfeld hochkant, Chips ohne Überlappung — siehe `docs/superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md`. Nicht im aktuellen Desktop-Schnitt.
+
 ## Nicht-Ziele
 
 - Live-Sync nach Comunio

@@ -36,6 +36,9 @@ Persönliches Tool für bis zu acht eingeladene Freunde (getrennte Comunio-Ligen
 - Punkteprognose-Engine → `docs/spec-punkteprognose.md`
 - Konkurrenz-Vergleich (voll) — echte Punkte-Differenz-Prognose → `docs/spec-konkurrenzvergleich.md`
 
+**Later — Mobile**
+- Eigene Handy-Layouts (Radar/Kader/Aufstellung), nicht nur schmales Desktop — `docs/superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md`
+
 ## Nicht-Ziele
 - Keine öffentliche Registrierung, kein gemeinsames Passwort
 - Keine direkte Comunio-Integration (technisch nicht möglich)
