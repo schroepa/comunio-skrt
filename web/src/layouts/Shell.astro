@@ -1,56 +1,130 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import "../styles/global.css";
-import Nav from "../components/Nav.tsx";
+import SidebarNav from "../components/SidebarNav.tsx";
+import SidebarToggle from "../components/SidebarToggle.tsx";
+import StatusBar from "../components/StatusBar.astro";
+import ThemeBoot from "../components/ThemeBoot.astro";
+import ThemeToggle from "../components/ThemeToggle.tsx";
+import { listFixtures, listPlayers, listSquad, getManagerProfile } from "../lib/directus";
+import { currentPathname, NAV_GROUPS } from "../lib/nav";
+import { officeStatus } from "../lib/status";
 
 interface Props {
   title: string;
   userEmail?: string;
 }
 const { title, userEmail } = Astro.props;
+const path = currentPathname(Astro.url.pathname);
+const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
+const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
+
+const [load, players, squad, profile] = await Promise.all([
+  listFixtures(db),
+  listPlayers(db),
+  listSquad({ ...db, userId: user.id }),
+  getManagerProfile({ ...db, userId: user.id }),
+]);
+
+const playerById = new Map(players.map((player) => [player.id, player]));
+const marketValues = squad
+  .map((row) => playerById.get(row.player_id)?.aktueller_marktwert)
+  .filter((value): value is number => typeof value === "number");
+
+const status = officeStatus({
+  now: new Date(),
+  fixtures: load.ok ? load.fixtures : [],
+  marketValues,
+  budget: profile?.budget,
+  squadCount: squad.length,
+});
 ---
-<html lang="de" class="dark">
+<html lang="de">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{title} · Comunio Assistant</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Syne:wght@700&display=swap" rel="stylesheet" />
+    <ThemeBoot />
     <ClientRouter />
   </head>
-  <body class="min-h-screen bg-background font-sans text-foreground antialiased">
-    <div class="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6">
-      <header class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <p class="font-[Syne] text-lg tracking-tight">Comunio Assistant</p>
-        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <div class="relative">
-            <nav class="nav-fallback flex flex-wrap gap-4 text-sm" aria-label="Hauptnavigation">
-              <a href="/">Dashboard</a>
-              <a href="/kader">Kader</a>
-              <a href="/radar">Radar</a>
-              <a href="/kader-check">Kader-Check</a>
-              <a href="/konkurrenz">Konkurrenz</a>
-              <a href="/aufstellung">Aufstellung</a>
-            </nav>
-            <div class="pointer-events-none absolute inset-0 has-[.liquid-nav]:pointer-events-auto has-[.liquid-nav]:static">
-              <Nav client:only="react" transition:persist="liquid-nav" />
-            </div>
+  <body class="min-h-svh bg-app-bg font-sans text-foreground antialiased">
+    <a class="skip-link" href="#inhalt">Zum Inhalt</a>
+    <div class="flex min-h-svh">
+      <aside
+        id="app-sidebar"
+        class="app-sidebar flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground max-lg:border-l max-lg:border-r-0"
+        aria-label="Menü"
+      >
+        <div class="flex h-14 items-center justify-between gap-2 border-b border-sidebar-border px-4">
+          <a href="/" class="text-sm font-semibold tracking-tight no-underline">Comunio Assistant</a>
+          <button
+            id="sidebar-close"
+            type="button"
+            class="inline-flex size-11 items-center justify-center rounded-md border border-sidebar-border lg:hidden"
+            aria-label="Menü schließen"
+            onclick="document.documentElement.removeAttribute('data-sidebar-open'); document.getElementById('app-workspace')?.removeAttribute('inert')"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div class="border-b border-sidebar-border px-3 py-3 lg:hidden">
+          <StatusBar status={status} layout="stack" />
+        </div>
+        <div class="relative min-h-0 flex-1 overflow-y-auto px-3 py-5">
+          <nav class="nav-fallback space-y-5" aria-label="Hauptnavigation">
+            {NAV_GROUPS.map((group) => (
+              <div class="space-y-2">
+                <p class="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.title}</p>
+                <div class="flex flex-col gap-0.5">
+                  {group.links.map((link) => (
+                    <a href={link.href} aria-current={path === link.href ? "page" : undefined}>{link.label}</a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+          <div class="pointer-events-none absolute inset-0 p-3 has-[.liquid-nav]:pointer-events-auto has-[.liquid-nav]:static has-[.liquid-nav]:p-0">
+            <SidebarNav client:only="react" currentPath={path} transition:persist="liquid-nav" />
           </div>
+        </div>
+        <div class="space-y-3 border-t border-sidebar-border p-3">
+          <ThemeToggle client:only="react" transition:persist="theme-toggle" />
           {userEmail ? (
-            <form method="post" action="/logout" class="text-xs text-muted-foreground">
-              <span class="mr-2">{userEmail}</span>
-              <button type="submit" class="underline">Abmelden</button>
+            <form method="post" action="/logout">
+              <p class="mb-2 truncate px-1 text-xs text-muted-foreground" title={userEmail}>{userEmail}</p>
+              <button
+                type="submit"
+                class="min-h-11 w-full rounded-md border border-sidebar-border px-3 text-sm hover:bg-sidebar-accent"
+              >
+                Abmelden
+              </button>
             </form>
           ) : null}
         </div>
-      </header>
-      <main class="flex-1 space-y-8">
-        <slot />
-      </main>
-      <footer class="mt-12 border-t border-border pt-4 text-xs text-muted-foreground">
-        Daten: OpenLigaDB (ODbL)
-      </footer>
+      </aside>
+      <button
+        type="button"
+        class="sidebar-backdrop"
+        tabindex="-1"
+        aria-hidden="true"
+        onclick="document.documentElement.removeAttribute('data-sidebar-open'); document.getElementById('app-workspace')?.removeAttribute('inert')"
+      ></button>
+
+      <div id="app-workspace" class="flex min-w-0 flex-1 flex-col">
+        <header class="sticky top-0 z-20 flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 pt-[env(safe-area-inset-top)]">
+          <p class="min-w-0 truncate font-semibold lg:hidden" aria-hidden="true">{title}</p>
+          <div class="hidden min-w-0 flex-1 lg:block">
+            <StatusBar status={status} userEmail={userEmail} layout="bar" />
+          </div>
+          <SidebarToggle client:load />
+        </header>
+        <main id="inhalt" class="min-w-0 flex-1 space-y-8 px-4 py-6 sm:px-6 lg:px-8" tabindex="-1">
+          <slot />
+        </main>
+        <footer class="border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-6 lg:px-8">
+          Daten: OpenLigaDB (ODbL)
+        </footer>
+      </div>
     </div>
   </body>
 </html>

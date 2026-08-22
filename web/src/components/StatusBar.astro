@@ -1,0 +1,48 @@
+---
+import DeadlineCountdown from "./DeadlineCountdown";
+import type { OfficeStatus } from "../lib/status";
+
+interface Props {
+  status: OfficeStatus;
+  userEmail?: string;
+  layout?: "bar" | "stack";
+}
+const { status, userEmail, layout = "bar" } = Astro.props;
+
+function money(value: number): string {
+  return `${value.toLocaleString("de-DE")} €`;
+}
+---
+<div class={layout === "stack" ? "flex flex-col gap-2 text-sm" : "flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-2 text-sm"}>
+  <p class="tabular-nums">
+    <span class="text-muted-foreground">Spieltag</span>
+    {" "}
+    <span class="font-semibold">{status.spieltag ?? "—"}</span>
+  </p>
+  <p class="tabular-nums">
+    <span class="text-muted-foreground">Deadline</span>
+    {" "}
+    {status.seasonOver ? (
+      <span class="font-semibold">Saison vorbei</span>
+    ) : status.deadlineIso ? (
+      <DeadlineCountdown client:load compact deadlineIso={status.deadlineIso} />
+    ) : (
+      <span class="font-semibold">—</span>
+    )}
+  </p>
+  <p class="tabular-nums">
+    <span class="text-muted-foreground">Budget</span>
+    {" "}
+    <span class="font-semibold">{status.remaining == null ? "—" : money(status.remaining)}</span>
+  </p>
+  <p class="tabular-nums">
+    <span class="text-muted-foreground">Kader</span>
+    {" "}
+    <span class="font-semibold">
+      {status.squadCount === 0 ? "leer" : `${status.squadCount} · ${money(status.value)}`}
+    </span>
+  </p>
+  {layout === "bar" && userEmail ? (
+    <p class="ml-auto hidden min-w-0 truncate text-muted-foreground xl:block" title={userEmail}>{userEmail}</p>
+  ) : null}
+</div>
