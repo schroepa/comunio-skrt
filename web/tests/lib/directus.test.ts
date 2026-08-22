@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listFixtures } from "../../src/lib/directus";
+import { listFixtures, listValueHistory } from "../../src/lib/directus";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -123,5 +123,38 @@ describe("listFixtures", () => {
     });
 
     expect(result).toEqual({ ok: true, fixtures: [validFixture] });
+  });
+});
+
+describe("listValueHistory", () => {
+  it("requests value_history newest first with bearer and apikey", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ player_id: 1, datum: "2026-08-21", marktwert: 1000000 }],
+    });
+    const rows = await listValueHistory({
+      ...auth,
+      url: "https://example.supabase.co/",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    const [calledUrl, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+    expect(calledUrl).toContain("/rest/v1/value_history?");
+    expect(calledUrl).toContain("select=player_id,datum,marktwert");
+    expect(calledUrl).toContain("order=datum.desc");
+    expect(calledUrl).toContain("limit=20000");
+    expect(init.headers).toEqual(
+      expect.objectContaining({
+        Authorization: "Bearer test-token",
+        apikey: "anon",
+      }),
+    );
+    expect(rows).toEqual([{ player_id: 1, datum: "2026-08-21", marktwert: 1000000 }]);
+  });
+
+  it("returns an empty list on HTTP error without throwing", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+    await expect(
+      listValueHistory({ ...auth, fetchImpl: fetchImpl as unknown as typeof fetch }),
+    ).resolves.toEqual([]);
   });
 });

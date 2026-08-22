@@ -26,6 +26,8 @@ Auth/Hosting: [Directus → Supabase](superpowers/specs/2026-08-21-directus-zu-s
 
 ## Design- und Baupläne
 
+- [Zahlen-Vertrauen (Fixture-Modifier, Club-Map, Marktwert)](superpowers/specs/2026-08-22-zahlen-vertrauen-design.md)
+- [Zahlen-Vertrauen, Plan](superpowers/plans/2026-08-22-zahlen-vertrauen.md)
 - [Spielerübersicht + Mobile Later](superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md)
 - [Freundes-Runde P0+P1, Plan](superpowers/plans/2026-08-21-freundesrunde-auth-kader.md)
 - [Kicker/Radar/Kader-Check, Design](superpowers/specs/2026-08-21-kicker-radar-kadercheck-design.md)

@@ -135,6 +135,8 @@ export type AvailabilityRecord = {
   status: string;
 };
 
+export type ValueHistoryRecord = { player_id: number; datum: string; marktwert: number };
+
 export type CompetitorRow = {
   id: number;
   competitor_name: string;
@@ -228,6 +230,25 @@ export async function listRatings(options: CatalogAuth) {
       path: "/rest/v1/rating_history?select=player_id,spieltag,note,minuten_gespielt&order=spieltag.desc&limit=10000",
     })) ?? []
   );
+}
+
+function isValueHistory(value: unknown): value is ValueHistoryRecord {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.player_id === "number" &&
+    typeof row.datum === "string" &&
+    row.datum.length > 0 &&
+    typeof row.marktwert === "number"
+  );
+}
+
+export async function listValueHistory(options: CatalogAuth) {
+  const rows = await getItems<unknown>({
+    ...options,
+    path: "/rest/v1/value_history?select=player_id,datum,marktwert&order=datum.desc&limit=20000",
+  });
+  return (rows ?? []).filter(isValueHistory);
 }
 
 export async function listAvailability(options: CatalogAuth & { spieltag: number }) {

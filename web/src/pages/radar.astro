@@ -6,7 +6,7 @@ import PageHeader from "../components/PageHeader.astro";
 import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
 import { radarRows } from "../lib/catalog";
-import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
+import { listAvailability, listFixtures, listPlayers, listRatings, listSquad, listValueHistory } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
 import { catalogFiltersActive, filterPlayers, hasPlayerFilters, parsePlayerFilters, uniqueClubs } from "../lib/players";
 import { parseRadarSort, RADAR_SORTS, sortRadarRows } from "../lib/radar-view";
@@ -18,11 +18,12 @@ const filters = parsePlayerFilters(Astro.url.searchParams);
 const sort = parseRadarSort(Astro.url.searchParams);
 const onlySquad = Astro.url.searchParams.get("kader") === "1";
 
-const [load, players, squad, ratings] = await Promise.all([
+const [load, players, squad, ratings, history] = await Promise.all([
   listFixtures(db),
   listPlayers(db),
   listSquad({ ...db, userId: user.id }),
   listRatings(db),
+  listValueHistory(db),
 ]);
 const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixtures, new Date()) : null;
 const spieltag = matchday?.spieltag ?? 1;
@@ -36,6 +37,8 @@ if (onlySquad) catalog = catalog.filter((player) => squadIds.has(player.id));
 const rows = sortRadarRows(
   radarRows(catalog, squadIds, ratings, availability, load.ok ? load.fixtures : [], spieltag, {
     includeHidden: true,
+    history,
+    marketPlayers: players,
   }),
   sort,
 );

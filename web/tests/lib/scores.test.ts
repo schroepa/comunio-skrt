@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formScore, radarBadge } from "../../src/lib/scores";
+import { fixtureModifier, fixtureText, formScore, priceScore, radarBadge, radarReason } from "../../src/lib/scores";
 
 describe("formScore", () => {
   it("returns null without notes", () => {
@@ -19,5 +19,60 @@ describe("radarBadge", () => {
 
   it("marks strong outsiders as buy", () => {
     expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok" })).toBe("Kaufen");
+  });
+
+  it("downgrades buy to watch on hard fixtures", () => {
+    expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok", modifier: -1 })).toBe("Beobachten");
+    expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok", modifier: 0 })).toBe("Kaufen");
+  });
+});
+
+describe("radarReason", () => {
+  it("names the fixture bucket and never claims mapping is missing", () => {
+    const text = radarReason({
+      trend: "steigend",
+      fixtureText: "günstige Gegner",
+      priceVsForm: "hinkt",
+      badge: "Kaufen",
+    });
+    expect(text).toBe("Form steigend, günstige Gegner, Preis hinkt → Kaufen");
+    expect(text).not.toMatch(/ohne Mapping/);
+  });
+});
+
+describe("fixtureModifier", () => {
+  it("returns 0 for an empty list, +1 below one third, -1 above two thirds", () => {
+    expect(fixtureModifier([])).toBe(0);
+    expect(fixtureModifier([20])).toBe(1);
+    expect(fixtureModifier([50])).toBe(0);
+    expect(fixtureModifier([80])).toBe(-1);
+    expect(fixtureModifier([100 / 3])).toBe(0);
+    expect(fixtureModifier([200 / 3])).toBe(0);
+    expect(fixtureModifier([20, 20, 80])).toBe(0);
+    expect(fixtureModifier([10, 10, 10])).toBe(1);
+  });
+});
+
+describe("fixtureText", () => {
+  it("uses unknown copy when no percentiles exist", () => {
+    expect(fixtureText(0, 0)).toBe("Gegner unbekannt");
+    expect(fixtureText(1, 1)).toBe("günstige Gegner");
+    expect(fixtureText(-1, 2)).toBe("schwere Gegner");
+    expect(fixtureText(0, 3)).toBe("gemischte Gegner");
+  });
+});
+
+describe("priceScore", () => {
+  const peers = [10, 20, 30];
+
+  it("stays peer-only without a usable previous value", () => {
+    expect(priceScore(20, peers)).toBe(50);
+    expect(priceScore(20, peers, null)).toBe(50);
+    expect(priceScore(20, peers, 0)).toBe(50);
+  });
+
+  it("mixes 60% peer and 40% trend when history exists", () => {
+    expect(priceScore(20, peers, 20 / 1.2)).toBe(70);
+    expect(priceScore(20, peers, 20 / 0.8)).toBe(30);
   });
 });

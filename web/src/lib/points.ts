@@ -8,6 +8,7 @@ export function expectedPoints(input: {
   status: AvailabilityKind | null;
   lastThreeMinutes: number[];
   venue: Venue;
+  fixtureModifier?: -1 | 0 | 1;
 }): number {
   const form = formScore(input.notesNewestFirst);
   const base = form == null ? 3 : 1 + (form / 100) * 7;
@@ -18,5 +19,7 @@ export function expectedPoints(input: {
   if (robustMinutes(input.lastThreeMinutes)) value *= 0.7;
   if (input.venue === "home") value *= 1.05;
   if (input.venue === "away") value *= 0.95;
+  if (input.fixtureModifier === 1) value *= 1.1;
+  if (input.fixtureModifier === -1) value *= 0.9;
   return Math.round(Math.min(12, Math.max(0, value)) * 10) / 10;
 }
