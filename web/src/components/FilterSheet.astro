@@ -1,0 +1,46 @@
+---
+interface Props {
+  active?: boolean;
+  title?: string;
+}
+const { active = false, title = "Filter" } = Astro.props;
+---
+<div class="filter-sheet">
+  <button
+    class="filter-sheet-open"
+    type="button"
+    data-filter-open
+    aria-haspopup="dialog"
+  >
+    {title}
+    {active ? <span class="filter-sheet-badge" aria-hidden="true"></span> : null}
+    {active ? <span class="sr-only">aktiv</span> : null}
+  </button>
+  <dialog class="filter-sheet-dialog" data-filter-dialog aria-labelledby="filter-sheet-title">
+    <div class="filter-sheet-panel">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 id="filter-sheet-title" class="text-lg font-semibold">{title}</h2>
+        <button class="inline-flex size-11 items-center justify-center rounded-md border border-border" type="button" data-filter-close aria-label="Filter schließen">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <slot />
+    </div>
+  </dialog>
+</div>
+<script>
+  function bind(root: Element) {
+    if (root.hasAttribute("data-filter-bound")) return;
+    root.setAttribute("data-filter-bound", "");
+    const dialog = root.querySelector<HTMLDialogElement>("[data-filter-dialog]");
+    const open = root.querySelector<HTMLButtonElement>("[data-filter-open]");
+    const close = root.querySelector<HTMLButtonElement>("[data-filter-close]");
+    if (!dialog || !open || !close) return;
+    open.addEventListener("click", () => dialog.showModal());
+    close.addEventListener("click", () => dialog.close());
+  }
+  document.querySelectorAll(".filter-sheet").forEach((node) => bind(node));
+  document.addEventListener("astro:page-load", () => {
+    document.querySelectorAll(".filter-sheet").forEach((node) => bind(node));
+  });
+</script>

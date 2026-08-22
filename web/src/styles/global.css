@@ -256,3 +256,70 @@ body:has(.liquid-nav) .nav-fallback {
     transition: none !important;
   }
 }
+
+.filter-sheet-open {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+}
+
+.filter-sheet-badge {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.filter-sheet-dialog {
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(85dvh, 40rem);
+  border: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.filter-sheet-dialog::backdrop {
+  background: oklch(0.15 0.01 107 / 0.45);
+}
+
+.filter-sheet-panel {
+  overflow: auto;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .filter-sheet-open {
+    display: none;
+  }
+
+  .filter-sheet-dialog {
+    display: contents !important;
+    position: static;
+    max-height: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .filter-sheet-dialog::backdrop {
+    display: none;
+  }
+
+  .filter-sheet-panel {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .filter-sheet-panel > div:first-child {
+    display: none;
+  }
+}

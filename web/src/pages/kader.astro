@@ -1,5 +1,6 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import FilterSheet from "../components/FilterSheet.astro";
 import PageHeader from "../components/PageHeader.astro";
 import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
@@ -13,7 +14,7 @@ import {
   removeFromSquad,
   saveBudget,
 } from "../lib/directus";
-import { filterPlayers, hasPlayerFilters, parsePlayerFilters, SEARCH_RESULT_LIMIT, uniqueClubs } from "../lib/players";
+import { catalogFiltersActive, filterPlayers, hasPlayerFilters, parsePlayerFilters, SEARCH_RESULT_LIMIT, uniqueClubs } from "../lib/players";
 import { formScore } from "../lib/scores";
 import Shell from "../layouts/Shell.astro";
 
@@ -128,7 +129,9 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
   <section class="space-y-3">
     <h2 class="text-xl font-semibold">Spieler suchen</h2>
     <p class="text-sm text-muted-foreground">Name, Position, Verein und Marktwert lassen sich kombinieren.</p>
-    <PlayerSearchForm filters={filters} clubs={clubs} />
+    <FilterSheet active={catalogFiltersActive(filters)}>
+      <PlayerSearchForm filters={filters} clubs={clubs} />
+    </FilterSheet>
     {hasPlayerFilters(filters) && searchHits.length === 0 ? (
       <p class="text-sm text-muted-foreground">Kein Treffer. Filter lockern.</p>
     ) : null}
