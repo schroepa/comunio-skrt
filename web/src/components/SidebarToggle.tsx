@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
-import { isSidebarOpen, setSidebarOpen } from "../lib/sidebar-drawer";
+import { closeSidebarUi, isSidebarOpen, setSidebarOpen } from "../lib/sidebar-drawer";
 
 function workspace(): HTMLElement | null {
   return document.getElementById("app-workspace");
 }
 
-function closeSidebar() {
-  setSidebarOpen(document.documentElement, false, workspace());
+function sidebar(): HTMLElement | null {
+  return document.getElementById("app-sidebar");
+}
+
+function isDesktop(): boolean {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function drawerSidebar(): HTMLElement | null {
+  return isDesktop() ? null : sidebar();
+}
+
+function closeSidebar(restoreFocus = false) {
+  const toggle = restoreFocus ? document.getElementById("sidebar-toggle") : null;
+  closeSidebarUi(document.documentElement, workspace(), drawerSidebar(), toggle);
+  if (isDesktop()) sidebar()?.removeAttribute("inert");
 }
 
 export default function SidebarToggle() {
@@ -21,9 +35,8 @@ export default function SidebarToggle() {
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isSidebarOpen(root)) {
-        closeSidebar();
+        closeSidebar(true);
         sync();
-        document.getElementById("sidebar-toggle")?.focus();
       }
     };
     const observer = new MutationObserver(sync);
@@ -48,9 +61,10 @@ export default function SidebarToggle() {
       aria-label={open ? "Menü schließen" : "Menü öffnen"}
       onClick={() => {
         const next = !isSidebarOpen(document.documentElement);
-        setSidebarOpen(document.documentElement, next, workspace());
+        setSidebarOpen(document.documentElement, next, workspace(), drawerSidebar());
         setOpen(next);
         if (next) document.getElementById("sidebar-close")?.focus();
+        else document.getElementById("sidebar-toggle")?.focus();
       }}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">

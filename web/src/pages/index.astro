@@ -66,7 +66,9 @@ const signals = radarRows(
                 <li class="flex items-center justify-between gap-3 text-sm">
                   <span>
                     {alert.player}
-                    <span class="mt-0.5 block text-muted-foreground">{alert.badge}</span>
+                    <span class="mt-0.5 block text-muted-foreground">
+                      {alert.tone === "block" ? "Nicht aufstellen." : "Vor der Deadline nochmal prüfen."}
+                    </span>
                   </span>
                   {alert.tone === "block" ? (
                     <Badge variant="destructive">{alert.badge}</Badge>
