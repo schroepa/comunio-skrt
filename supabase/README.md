@@ -5,10 +5,15 @@ Postgres + Auth ersetzen Directus. Du legst das Projekt an; Schema und App sind 
 ## Einmalig
 
 1. [supabase.com](https://supabase.com) → New project, Region **Frankfurt** (`eu-central-1`), Free.
-2. **Authentication → Providers → Email** an. Sign-ups **aus** (Invite only).
+2. **Authentication → Sign In / Providers** (nicht mehr „Providers“): Email an. Unter **User Signups** den Schalter **Allow new users to sign up** aus (Invite only).
 3. **SQL Editor** → Inhalt von `migrations/20260821183000_init.sql` ausführen.
 4. **Authentication → Users** → User anlegen (E-Mail + Passwort) für dich und später die Freunde.
-5. **Project Settings → API:** `Project URL` und `anon` `public` Key.
+5. Keys holen — nicht mehr unter „Project Settings → API“:
+   - Oben der grüne Button **Connect** → Tab **API Keys**, oder
+   - Zahnrad unten links (**Project Settings**) → **API Keys**
+   - **Project URL** → `SUPABASE_URL`
+   - Web: **anon** (Legacy) oder **Publishable key** → `SUPABASE_ANON_KEY`
+   - Scraper: Tab **Legacy API Keys** → **service_role**, oder neuer **Secret key** → `SUPABASE_SERVICE_ROLE_KEY`
 
 Web (`web/.env`):
 

@@ -1,7 +1,9 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import PlayerSearchForm from "../components/PlayerSearchForm.astro";
 import { formScore } from "../lib/scores";
 import { notesFor } from "../lib/catalog";
+import { filterPlayers, hasPlayerFilters, parsePlayerFilters, SEARCH_RESULT_LIMIT, uniqueClubs } from "../lib/players";
 import {
   addCompetitor,
   listCompetitors,
@@ -14,7 +16,7 @@ import Shell from "../layouts/Shell.astro";
 
 const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
 const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
-const query = Astro.url.searchParams.get("q") ?? "";
+const filters = parsePlayerFilters(Astro.url.searchParams);
 const rival = Astro.url.searchParams.get("rival") ?? "";
 
 if (Astro.request.method === "POST") {
@@ -40,13 +42,15 @@ if (Astro.request.method === "POST") {
   return Astro.redirect("/konkurrenz");
 }
 
-const [players, squad, ratings, rivals, searchHits] = await Promise.all([
+const [players, squad, ratings, rivals] = await Promise.all([
   listPlayers(db),
   listSquad({ ...db, userId: user.id }),
   listRatings(db),
   listCompetitors({ ...db, userId: user.id }),
-  query ? listPlayers({ ...db, search: query }) : Promise.resolve([]),
 ]);
+const clubs = uniqueClubs(players);
+const matched = hasPlayerFilters(filters) ? filterPlayers(players, filters) : [];
+const searchHits = matched.slice(0, SEARCH_RESULT_LIMIT);
 
 const byId = new Map(players.map((player) => [player.id, player]));
 
@@ -104,15 +108,17 @@ for (const row of rivals) {
 
   <section class="space-y-3">
     <h2 class="font-[Syne] text-xl">Spieler einem Rivalen zuordnen</h2>
-    <form method="get" class="flex flex-wrap gap-2">
-      <input class="rounded-md border border-border bg-card px-3 py-2 text-sm" name="rival" value={rival} placeholder="Name des Rivalen" required />
-      <input class="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm" type="search" name="q" value={query} placeholder="Spieler" />
-      <button class="rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Suchen</button>
-    </form>
+    <PlayerSearchForm filters={filters} clubs={clubs} rival={rival} />
+    {hasPlayerFilters(filters) && searchHits.length === 0 ? (
+      <p class="text-sm text-muted-foreground">Kein Treffer. Filter lockern.</p>
+    ) : null}
     <ul class="divide-y divide-border">
       {searchHits.map((player) => (
         <li class="flex items-center justify-between gap-3 py-2 text-sm">
-          <span>{player.name} · {player.position}</span>
+          <span>
+            {player.name}
+            <span class="ml-2 text-muted-foreground">{player.position} · {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
+          </span>
           <form method="post">
             <input type="hidden" name="action" value="add" />
             <input type="hidden" name="competitor_name" value={rival} />

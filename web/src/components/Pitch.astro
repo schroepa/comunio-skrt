@@ -1,0 +1,151 @@
+---
+import type { PlayerRecord } from "../lib/directus";
+import type { LineupCandidate } from "../lib/lineup";
+
+type Props = {
+  eleven: LineupCandidate[];
+  formation: string;
+  total: number;
+  playersById: Record<string, PlayerRecord>;
+};
+
+const { eleven, formation, total, playersById } = Astro.props;
+const rows = [
+  { key: "Sturm", label: "Sturm" },
+  { key: "Mittelfeld", label: "Mittelfeld" },
+  { key: "Abwehr", label: "Abwehr" },
+  { key: "Torwart", label: "Torwart" },
+] as const;
+
+function shirtName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return parts[parts.length - 1];
+}
+---
+<section class="space-y-3" aria-labelledby="pitch-heading">
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <h2 id="pitch-heading" class="font-[Syne] text-xl">Spielfeld</h2>
+      <p class="text-sm text-muted-foreground">
+        Formation {formation} · {total.toLocaleString("de-DE")} erwartete Punkte
+      </p>
+    </div>
+  </div>
+
+  <ol class="sr-only">
+    {eleven.map((row) => {
+      const player = playersById[String(row.id)];
+      return (
+        <li>
+          {row.position}: {player?.name ?? `Spieler ${row.id}`}, {row.points.toLocaleString("de-DE")} Punkte
+        </li>
+      );
+    })}
+  </ol>
+
+  <div class="pitch" aria-hidden="true">
+    <div class="pitch-mark pitch-halfway"></div>
+    <div class="pitch-mark pitch-circle"></div>
+    <div class="pitch-mark pitch-box-top"></div>
+    <div class="pitch-mark pitch-box-bottom"></div>
+    <div class="relative z-10 flex h-full flex-col justify-between px-2 py-5 sm:px-6 sm:py-7">
+      {rows.map((line) => {
+        const group = eleven.filter((row) => row.position === line.key);
+        return (
+          <div class="flex min-h-16 flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {group.map((row) => {
+              const player = playersById[String(row.id)];
+              const name = player?.name ?? `Spieler ${row.id}`;
+              return (
+                <article class="player-chip" title={`${name} · ${player?.verein ?? ""} · ${row.points.toLocaleString("de-DE")} Pkt.`}>
+                  <p class="font-medium leading-tight">{shirtName(name)}</p>
+                  <p class="text-[11px] tabular-nums text-primary">{row.points.toLocaleString("de-DE")}</p>
+                </article>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+<style>
+  .pitch {
+    position: relative;
+    overflow: hidden;
+    min-height: 28rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in oklch, var(--color-primary) 28%, transparent);
+    background:
+      linear-gradient(180deg, oklch(0.28 0.055 155) 0%, oklch(0.2 0.045 155) 100%),
+      repeating-linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 3.4rem,
+        oklch(1 0 0 / 0.035) 3.4rem,
+        oklch(1 0 0 / 0.035) 6.8rem
+      );
+  }
+
+  .pitch-mark {
+    pointer-events: none;
+    position: absolute;
+    border: 1.5px solid oklch(0.92 0.04 105 / 0.22);
+  }
+
+  .pitch-halfway {
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 0;
+  }
+
+  .pitch-circle {
+    width: 5.5rem;
+    height: 5.5rem;
+    left: 50%;
+    top: 50%;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+  }
+
+  .pitch-box-top,
+  .pitch-box-bottom {
+    left: 22%;
+    right: 22%;
+    height: 3.4rem;
+  }
+
+  .pitch-box-top {
+    top: 0;
+    border-top: 0;
+  }
+
+  .pitch-box-bottom {
+    bottom: 0;
+    border-bottom: 0;
+  }
+
+  .player-chip {
+    min-width: 5.5rem;
+    max-width: 7.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in oklch, var(--color-primary) 35%, var(--color-border));
+    background: oklch(0.16 0.03 155 / 0.88);
+    padding: 0.4rem 0.55rem;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .pitch {
+      min-height: 34rem;
+    }
+    .player-chip {
+      min-width: 6.5rem;
+      font-size: 0.8125rem;
+    }
+  }
+</style>

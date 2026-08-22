@@ -1,0 +1,92 @@
+---
+import { PLAYER_POSITIONS, type PlayerFilters } from "../lib/players";
+
+type Props = {
+  filters: PlayerFilters;
+  clubs: string[];
+  rival?: string;
+};
+
+const { filters, clubs, rival } = Astro.props;
+---
+<form method="get" class="space-y-4">
+  {
+    rival !== undefined ? (
+      <label class="block text-sm">
+        Name des Rivalen
+        <input
+          class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2"
+          name="rival"
+          value={rival}
+          required
+          autocomplete="off"
+        />
+      </label>
+    ) : null
+  }
+  <label class="block text-sm">
+    Name
+    <input
+      class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2"
+      type="search"
+      name="q"
+      value={filters.q}
+      placeholder="z. B. Prömel"
+      autocomplete="off"
+    />
+  </label>
+  <fieldset class="space-y-2">
+    <legend class="text-sm">Position</legend>
+    <div class="flex flex-wrap gap-2">
+      <label class:list={["inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-ring", !filters.position ? "border-primary bg-primary/15" : "border-border"]}>
+        <input class="sr-only" type="radio" name="position" value="" checked={!filters.position} />
+        Alle
+      </label>
+      {PLAYER_POSITIONS.map((value) => (
+        <label class:list={["inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-ring", filters.position === value ? "border-primary bg-primary/15" : "border-border"]}>
+          <input class="sr-only" type="radio" name="position" value={value} checked={filters.position === value} />
+          {value}
+        </label>
+      ))}
+    </div>
+  </fieldset>
+  <div class="grid gap-3 sm:grid-cols-3">
+    <label class="block text-sm">
+      Verein
+      <select class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2" name="verein">
+        <option value="">Alle Vereine</option>
+        {clubs.map((club) => (
+          <option value={club} selected={filters.verein === club}>{club}</option>
+        ))}
+      </select>
+    </label>
+    <label class="block text-sm">
+      Marktwert von (€)
+      <input
+        class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 tabular-nums"
+        type="number"
+        name="mw_min"
+        min="0"
+        step="100000"
+        inputmode="numeric"
+        value={filters.mwMin ?? ""}
+      />
+    </label>
+    <label class="block text-sm">
+      Marktwert bis (€)
+      <input
+        class="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 tabular-nums"
+        type="number"
+        name="mw_max"
+        min="0"
+        step="100000"
+        inputmode="numeric"
+        value={filters.mwMax ?? ""}
+      />
+    </label>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button class="min-h-11 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Filtern</button>
+    <a class="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm" href={rival !== undefined ? "/konkurrenz" : "/kader"}>Zurücksetzen</a>
+  </div>
+</form>

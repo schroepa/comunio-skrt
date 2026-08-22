@@ -1,5 +1,6 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import Pitch from "../components/Pitch.astro";
 import { playerPoints } from "../lib/catalog";
 import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
@@ -36,40 +37,50 @@ for (const row of squad) {
 const result = pickLineup(candidates);
 ---
 <Shell title="Aufstellung" userEmail={user.email}>
-  <h1 class="font-[Syne] text-3xl">Aufstellung</h1>
-  <p class="text-sm text-muted-foreground">Schätzung, keine Garantie. Übernahme in Comunio bleibt manuell.</p>
-  <form method="get" class="mt-2">
-    <button class="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Neu berechnen</button>
-  </form>
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="font-[Syne] text-3xl">Aufstellung</h1>
+      <p class="mt-1 text-sm text-muted-foreground">Schätzung, keine Garantie. Übernahme in Comunio bleibt manuell.</p>
+    </div>
+    <form method="get">
+      <button class="min-h-11 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Neu berechnen</button>
+    </form>
+  </div>
   {!result.ok && result.reason === "no_goalkeeper" ? (
     <EmptyState body="Kein fitte Torwart im Kader." />
   ) : !result.ok ? (
     <EmptyState body="Kader ist zu klein für eine Elf." />
   ) : (
-    <div class="space-y-6">
-      <p class="text-sm">Formation {result.formation} · {result.total.toLocaleString("de-DE")} erwartete Punkte</p>
-      {(["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const).map((position) => (
-        <section>
-          <h2 class="font-[Syne] text-xl">{position}</h2>
-          <ul class="mt-2 text-sm">
-            {result.eleven
-              .filter((row) => row.position === position)
-              .map((row) => (
-                <li class="flex justify-between border-b border-border py-1">
-                  <span>{byId.get(row.id)?.name}</span>
-                  <span class="tabular-nums">{row.points.toLocaleString("de-DE")}</span>
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
+    <div class="space-y-8">
+      <Pitch
+        eleven={result.eleven}
+        formation={result.formation}
+        total={result.total}
+        playersById={Object.fromEntries([...byId.entries()].map(([id, player]) => [String(id), player]))}
+      />
       <section>
         <h2 class="font-[Syne] text-xl">Bank</h2>
-        <ul class="mt-2 text-sm text-muted-foreground">
-          {result.bench.map((row) => (
-            <li>{byId.get(row.id)?.name} · {row.points.toLocaleString("de-DE")}</li>
-          ))}
-        </ul>
+        {result.bench.length === 0 ? (
+          <p class="mt-2 text-sm text-muted-foreground">Keine Reservespieler.</p>
+        ) : (
+          <ul class="mt-3 divide-y divide-border">
+            {result.bench.map((row) => {
+              const player = byId.get(row.id);
+              return (
+                <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span>
+                    {player?.name ?? `Spieler ${row.id}`}
+                    <span class="ml-2 text-muted-foreground">
+                      {player?.position}
+                      {player?.verein ? ` · ${player.verein}` : ""}
+                    </span>
+                  </span>
+                  <span class="tabular-nums text-muted-foreground">{row.points.toLocaleString("de-DE")}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </div>
   )}
