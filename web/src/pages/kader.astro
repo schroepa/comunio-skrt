@@ -4,6 +4,7 @@ import FilterSheet from "../components/FilterSheet.astro";
 import PageHeader from "../components/PageHeader.astro";
 import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
+import SquadImport from "../components/SquadImport.astro";
 import { notesFor } from "../lib/catalog";
 import {
   addToSquad,
@@ -16,44 +17,69 @@ import {
 } from "../lib/directus";
 import { catalogFiltersActive, filterPlayers, hasPlayerFilters, parsePlayerFilters, SEARCH_RESULT_LIMIT, uniqueClubs } from "../lib/players";
 import { formScore } from "../lib/scores";
+import { matchSquadImport, parseImportPlayerIds, parseSquadPaste } from "../lib/squad-import";
 import Shell from "../layouts/Shell.astro";
 
 const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
 const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
 const filters = parsePlayerFilters(Astro.url.searchParams);
+let importNames = "";
 
 if (Astro.request.method === "POST") {
   const form = await Astro.request.formData();
   const action = String(form.get("action") ?? "");
-  if (action === "add") {
-    await addToSquad({
-      url: db.url,
-      anonKey: db.anonKey,
-      token: db.token,
-      userId: user.id,
-      playerId: Number(form.get("player_id")),
-    });
+  if (action === "preview-import") {
+    importNames = String(form.get("names") ?? "");
+  } else {
+    if (action === "add") {
+      await addToSquad({
+        url: db.url,
+        anonKey: db.anonKey,
+        token: db.token,
+        userId: user.id,
+        playerId: Number(form.get("player_id")),
+      });
+    }
+    if (action === "import") {
+      const [currentSquad, catalog] = await Promise.all([
+        listSquad({ ...db, userId: user.id }),
+        listPlayers(db),
+      ]);
+      const owned = new Set(currentSquad.map((row) => row.player_id));
+      const known = new Set(catalog.map((player) => player.id));
+      for (const playerId of parseImportPlayerIds(form.getAll("player_id"))) {
+        if (!known.has(playerId) || owned.has(playerId)) continue;
+        await addToSquad({
+          url: db.url,
+          anonKey: db.anonKey,
+          token: db.token,
+          userId: user.id,
+          playerId,
+        });
+        owned.add(playerId);
+      }
+    }
+    if (action === "remove") {
+      await removeFromSquad({
+        url: db.url,
+        anonKey: db.anonKey,
+        token: db.token,
+        membershipId: Number(form.get("membership_id")),
+      });
+    }
+    if (action === "budget") {
+      const profile = await getManagerProfile({ ...db, userId: user.id });
+      await saveBudget({
+        url: db.url,
+        anonKey: db.anonKey,
+        token: db.token,
+        userId: user.id,
+        budget: Number(form.get("budget")),
+        profileId: profile?.id,
+      });
+    }
+    return Astro.redirect(`${Astro.url.pathname}${Astro.url.search}`);
   }
-  if (action === "remove") {
-    await removeFromSquad({
-      url: db.url,
-      anonKey: db.anonKey,
-      token: db.token,
-      membershipId: Number(form.get("membership_id")),
-    });
-  }
-  if (action === "budget") {
-    const profile = await getManagerProfile({ ...db, userId: user.id });
-    await saveBudget({
-      url: db.url,
-      anonKey: db.anonKey,
-      token: db.token,
-      userId: user.id,
-      budget: Number(form.get("budget")),
-      profileId: profile?.id,
-    });
-  }
-  return Astro.redirect(`${Astro.url.pathname}${Astro.url.search}`);
 }
 
 const [squad, players, profile, ratings] = await Promise.all([
@@ -76,9 +102,10 @@ const squadPlayers = squad
   .filter((row) => row !== null);
 const inSquad = new Set(squad.map((row) => row.player_id));
 const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
+const importMatches = importNames ? matchSquadImport(parseSquadPaste(importNames), players) : null;
 ---
 <Shell title="Mein Kader" userEmail={user.email}>
-  <PageHeader title="Mein Kader" lead="Spieler eintragen und Budget pflegen — so wie in Comunio." />
+  <PageHeader title="Mein Kader" lead="Namen aus Comunio einfügen oder einzeln suchen — Budget bleibt ein eigenes Feld." />
 
   <form method="post" class="flex flex-wrap items-end gap-3">
     <input type="hidden" name="action" value="budget" />
@@ -89,8 +116,10 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
     <button class="min-h-11 rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Budget speichern</button>
   </form>
 
+  <SquadImport names={importNames} matches={importMatches} inSquad={inSquad} />
+
   {squadPlayers.length === 0 ? (
-    <EmptyState title="Noch leer" body="Suche unten nach Spielern und nimm sie in den Kader." />
+    <EmptyState title="Noch leer" body="Namen oben einfügen und abgleichen, oder unten einzeln suchen." />
   ) : (
     <div class="space-y-6">
       {positions.map((position) => {
@@ -104,16 +133,11 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
                 const notes = notesFor(player.id, ratings);
                 return (
                   <li>
-                    <PlayerCatalogRow
-                      player={player}
-                      notes={notes}
-                      form={formScore(notes)}
-                      inSquad
-                    >
+                    <PlayerCatalogRow player={player} notes={notes} form={formScore(notes)}>
                       <form method="post" onsubmit="return confirm('Diesen Spieler aus dem Kader nehmen?');">
                         <input type="hidden" name="action" value="remove" />
                         <input type="hidden" name="membership_id" value={player.membershipId} />
-                        <button class="min-h-11 text-destructive underline" type="submit">Entfernen</button>
+                        <button class="text-destructive" type="submit">Entfernen</button>
                       </form>
                     </PlayerCatalogRow>
                   </li>
@@ -154,7 +178,7 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
             <form method="post">
               <input type="hidden" name="action" value="add" />
               <input type="hidden" name="player_id" value={player.id} />
-              <button class="min-h-11 text-link disabled:text-muted-foreground disabled:no-underline" type="submit" disabled={inSquad.has(player.id)}>
+              <button class="text-link disabled:text-muted-foreground" type="submit" disabled={inSquad.has(player.id)}>
                 {inSquad.has(player.id) ? "Bereits im Kader" : "In den Kader"}
               </button>
             </form>

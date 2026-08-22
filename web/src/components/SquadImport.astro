@@ -1,0 +1,124 @@
+---
+import PlayerCatalogRow from "./PlayerCatalogRow.astro";
+import type { SquadImportMatch } from "../lib/squad-import";
+import { summarizeSquadImport } from "../lib/squad-import";
+
+type Props = {
+  names: string;
+  matches: SquadImportMatch[] | null;
+  inSquad: Set<number>;
+};
+
+const { names, matches, inSquad } = Astro.props;
+const summary = matches ? summarizeSquadImport(matches) : null;
+const unique = matches?.filter((row) => row.status === "matched") ?? [];
+const ambiguous = matches?.filter((row) => row.status === "ambiguous") ?? [];
+const unmatched = matches?.filter((row) => row.status === "unmatched") ?? [];
+const addable = unique.filter((row) => row.status === "matched" && !inSquad.has(row.player.id));
+---
+<section class="space-y-3 rounded-lg border border-border bg-card px-4 py-4">
+  <div class="space-y-1">
+    <h2 class="text-xl font-semibold">Aus Comunio übernehmen</h2>
+    <p class="text-pretty text-sm leading-relaxed text-muted-foreground">
+      Namen aus der App kopieren, eine Zeile pro Spieler. Überschriften wie „Sturm (4)“ und Marktwerte fallen weg.
+    </p>
+  </div>
+
+  <form method="post" class="space-y-3">
+    <input type="hidden" name="action" value="preview-import" />
+    <label class="block text-sm">
+      Namen
+      <textarea
+        class="mt-1 block min-h-40 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-sm leading-relaxed"
+        name="names"
+        rows="10"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder={"Demirović\nTiago Tomás\nKade\nLukeba\nK. Müller"}
+      >{names}</textarea>
+    </label>
+    <button class="min-h-11 rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Abgleichen</button>
+  </form>
+
+  {
+    matches && summary ? (
+      <div class="space-y-4 border-t border-border pt-4">
+        {matches.length === 0 ? (
+          <p class="text-sm text-muted-foreground">Keine Namen erkannt. Eine Zeile pro Spieler einfügen.</p>
+        ) : (
+          <p class="text-sm text-muted-foreground">
+            {summary.matched.toLocaleString("de-DE")} eindeutig
+            {" · "}
+            {summary.ambiguous.toLocaleString("de-DE")} unsicher
+            {" · "}
+            {summary.unmatched.toLocaleString("de-DE")} ohne Treffer
+          </p>
+        )}
+
+        {unique.length > 0 ? (
+          <form method="post" class="space-y-3">
+            <input type="hidden" name="action" value="import" />
+            <ul>
+              {unique.map((row) => {
+                if (row.status !== "matched") return null;
+                const already = inSquad.has(row.player.id);
+                return (
+                  <li>
+                    <label class="flex items-center gap-3">
+                      <input
+                        class="size-5 shrink-0"
+                        type="checkbox"
+                        name="player_id"
+                        value={row.player.id}
+                        checked={!already}
+                        disabled={already}
+                      />
+                      <div class="min-w-0 flex-1">
+                        <PlayerCatalogRow player={row.player} inSquad={already} detail={`eingefügt als „${row.query}“`} />
+                      </div>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            {addable.length > 0 ? (
+              <button class="min-h-11 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">
+                {addable.length.toLocaleString("de-DE")} in den Kader übernehmen
+              </button>
+            ) : (
+              <p class="text-sm text-muted-foreground">Alle eindeutigen Treffer sind schon im Kader.</p>
+            )}
+          </form>
+        ) : null}
+
+        {ambiguous.length > 0 ? (
+          <div class="space-y-2">
+            <h3 class="text-sm font-semibold">Unsicher — über die Suche ergänzen</h3>
+            <ul class="space-y-2 text-sm">
+              {ambiguous.map((row) => {
+                if (row.status !== "ambiguous") return null;
+                return (
+                  <li>
+                    <p class="font-medium">{row.query}</p>
+                    <p class="text-muted-foreground">{row.players.map((player) => player.name).join(" · ")}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        {unmatched.length > 0 ? (
+          <div class="space-y-2">
+            <h3 class="text-sm font-semibold">Ohne Treffer im Katalog</h3>
+            <ul class="text-sm text-muted-foreground">
+              {unmatched.map((row) => (
+                <li>{row.query}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    ) : null
+  }
+</section>

@@ -1,7 +1,9 @@
 ---
 import { Badge } from "./ui/badge";
 import FormBars from "./FormBars.astro";
+import RowMenu from "./RowMenu.astro";
 import type { PlayerRecord } from "../lib/directus";
+import { formatMarketValue } from "../lib/money";
 import { positionChip } from "../lib/radar-view";
 
 type Props = {
@@ -15,6 +17,8 @@ type Props = {
 
 const { player, notes = [], form = null, inSquad = false, badge, detail } = Astro.props;
 const chip = positionChip(player.position);
+const hasActions = Astro.slots.has("default");
+const hasForm = notes.length > 0;
 
 const badgeClass: Record<string, string> = {
   Kaufen: "bg-primary/15 text-primary",
@@ -25,35 +29,37 @@ const badgeClass: Record<string, string> = {
   "Kein Signal": "bg-muted/50 text-muted-foreground",
 };
 ---
-<article class="grid gap-3 overflow-x-hidden border-b border-border/60 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-  <div class="flex min-w-0 items-start gap-3">
-    <span class:list={["mt-0.5 inline-flex h-7 min-w-9 items-center justify-center rounded px-1 text-[11px] font-semibold", chip.className]}>
-      {chip.code}
-    </span>
-    <div class="min-w-0">
-      <p class="truncate font-medium">
-        {player.name}
-        {inSquad ? <span class="ml-2 text-xs font-normal text-muted-foreground">Kader</span> : null}
-      </p>
-      <p class="truncate text-sm text-muted-foreground">
-        {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €
-      </p>
-      {detail ? <p class="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-    </div>
+<article class="flex min-h-14 items-center gap-2 border-b border-border/60 py-2 sm:gap-3">
+  <span class:list={["inline-flex h-7 min-w-9 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold", chip.className]}>
+    {chip.code}
+  </span>
+  <div class="min-w-0 flex-1">
+    <p class="truncate font-medium leading-tight">
+      {player.name}
+      {inSquad ? <span class="ml-1.5 text-xs font-normal text-muted-foreground">Kader</span> : null}
+    </p>
+    <p class="truncate text-sm text-muted-foreground">{player.verein}</p>
+    {detail ? <p class="mt-0.5 truncate text-xs text-muted-foreground">{detail}</p> : null}
   </div>
-  <div class="flex flex-wrap items-center gap-3 sm:justify-end">
-    <div class="text-right">
-      <p class="text-[11px] text-muted-foreground">Form</p>
-      {notes.length === 0 ? (
-        <p class="text-sm tabular-nums text-muted-foreground">—</p>
-      ) : (
-        <div class="flex items-end gap-2">
-          <FormBars notes={notes} />
+  <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+    <p class="tabular-nums text-sm font-medium whitespace-nowrap">{formatMarketValue(player.aktueller_marktwert)}</p>
+    {
+      hasForm ? (
+        <div class="flex items-end gap-1" title={form == null ? "Form" : `Form ${Math.round(form)}`}>
+          <div class="hidden sm:block">
+            <FormBars notes={notes} />
+          </div>
           <span class="text-sm tabular-nums">{form == null ? "—" : Math.round(form)}</span>
         </div>
-      )}
-    </div>
+      ) : null
+    }
     {badge ? <Badge className={badgeClass[badge] ?? "bg-muted text-muted-foreground"}>{badge}</Badge> : null}
-    <slot />
+    {
+      hasActions ? (
+        <RowMenu>
+          <slot />
+        </RowMenu>
+      ) : null
+    }
   </div>
 </article>

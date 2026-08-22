@@ -148,7 +148,7 @@ for (const row of rivals) {
               <input type="hidden" name="competitor_name" value={rival} />
               <input type="hidden" name="player_id" value={player.id} />
               <button
-                class="min-h-11 text-link disabled:text-muted-foreground disabled:no-underline"
+                class="text-link disabled:text-muted-foreground"
                 type="submit"
                 disabled={!rival.trim()}
                 title={!rival.trim() ? "Zuerst Rivalen-Namen eintragen und filtern" : undefined}

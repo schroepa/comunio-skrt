@@ -10,3 +10,5 @@ directus/extensions/
 scraper/.env
 scraper/.cache/
 web/.env
+.vercel/
+.vercel

@@ -32,17 +32,7 @@ Gleiche Zeilenkomponente später in Kader-Suche und Konkurrenz wiederverwenden.
 
 ## Later — Mobile
 
-Eigene Optimierung, **nicht** „Desktop verkleinern“. Handy ist der wahrscheinliche Ort vor der Deadline.
-
-| Fläche | Later-Anforderung |
-|---|---|
-| Radar / Spieler | Eine Spalte; Zeile scannbar ohne horizontales Scrollen; Filter als Bottom-Sheet oder Accordion, nicht als langes Formular über der Liste |
-| Kader-Suche | Dieselbe Zeile; Primäraktion „In den Kader“ als 44×44-px-Ziel |
-| Aufstellung / Spielfeld | Feld hochkant, Chips stapeln ohne Überlappung, Bank unter dem Feld |
-| Nav | Gooey-Nav auf schmalem Viewport prüfen: umbrechen oder Overflow-Menü, keine abgeschnittenen Labels |
-| Allgemein | Kein Hover als einzige Info; Fokus/Touch ≥ 24px (AA), besser 44px; Zoom 200 % ohne Funktionsverlust |
-
-**Nicht in Later-Mobile:** native App, Push, PWA-Install-Zwang.
+**Umgesetzt in:** [Mobile-Ansicht (ganzes Tool)](2026-08-22-mobile-ansicht-design.md) — Chrome, Filter-Sheet, Seiten. Dieser Abschnitt ist nur noch die Ursprungsskizze.
 
 ## Messung (grob)
 

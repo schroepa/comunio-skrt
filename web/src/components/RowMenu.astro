@@ -1,0 +1,137 @@
+---
+interface Props {
+  label?: string;
+}
+const { label = "Aktionen" } = Astro.props;
+---
+<details class="row-menu">
+  <summary class="row-menu-trigger" aria-label={label}>
+    <span aria-hidden="true">⋯</span>
+  </summary>
+  <div class="row-menu-panel" role="menu">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .row-menu {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .row-menu-trigger {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    list-style: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .row-menu-trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  .row-menu-trigger:hover,
+  .row-menu[open] > .row-menu-trigger {
+    background: var(--muted);
+    color: var(--foreground);
+  }
+
+  .row-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% - 0.15rem);
+    z-index: 30;
+    min-width: 12.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 0.25rem;
+    box-shadow: 0 8px 24px color-mix(in oklch, var(--foreground) 12%, transparent);
+  }
+
+  .row-menu-panel :global(form) {
+    margin: 0;
+  }
+
+  .row-menu-panel :global(button),
+  .row-menu-panel :global(a) {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: flex-start;
+    border: 0;
+    border-radius: calc(var(--radius) - 2px);
+    background: transparent;
+    padding: 0 0.75rem;
+    text-align: left;
+    text-decoration: none;
+    font-size: 0.875rem;
+  }
+
+  .row-menu-panel :global(button:hover),
+  .row-menu-panel :global(a:hover) {
+    background: var(--muted);
+  }
+
+  .row-menu-panel :global(button:disabled) {
+    color: var(--muted-foreground);
+  }
+
+  .row-menu-panel :global(.text-destructive),
+  .row-menu-panel :global(button.text-destructive) {
+    color: var(--destructive);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row-menu-panel {
+      box-shadow: none;
+    }
+  }
+</style>
+
+<script>
+  const bound = Symbol.for("comunio-row-menu");
+  const root = globalThis as typeof globalThis & { [bound]?: boolean };
+  if (!root[bound]) {
+    root[bound] = true;
+
+    function closeAll(except?: HTMLDetailsElement) {
+      document.querySelectorAll<HTMLDetailsElement>("details.row-menu[open]").forEach((node) => {
+        if (node !== except) node.removeAttribute("open");
+      });
+    }
+
+    document.addEventListener(
+      "toggle",
+      (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLDetailsElement) || !target.classList.contains("row-menu") || !target.open) return;
+        closeAll(target);
+      },
+      true,
+    );
+
+    document.addEventListener("pointerdown", (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      document.querySelectorAll<HTMLDetailsElement>("details.row-menu[open]").forEach((node) => {
+        if (!node.contains(target)) node.removeAttribute("open");
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const open = document.querySelector<HTMLDetailsElement>("details.row-menu[open]");
+      closeAll();
+      open?.querySelector<HTMLElement>("summary")?.focus();
+    });
+  }
+</script>
