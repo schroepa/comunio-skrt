@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { formatDeadlineRemaining } from "../lib/countdown";
 
-type Props = { deadlineIso: string };
+type Props = { deadlineIso: string; compact?: boolean };
 
-export default function DeadlineCountdown({ deadlineIso }: Props) {
+export default function DeadlineCountdown({ deadlineIso, compact = false }: Props) {
   const deadline = new Date(deadlineIso);
   const [now, setNow] = useState(() => new Date());
 
@@ -12,7 +12,9 @@ export default function DeadlineCountdown({ deadlineIso }: Props) {
     return () => window.clearInterval(id);
   }, []);
 
-  return (
-    <p className="font-[Syne] text-2xl tabular-nums">{formatDeadlineRemaining(deadline, now)}</p>
-  );
+  const label = formatDeadlineRemaining(deadline, now);
+  if (compact) {
+    return <span className="font-semibold tabular-nums">{label}</span>;
+  }
+  return <p className="text-2xl font-semibold tabular-nums tracking-tight">{label}</p>;
 }

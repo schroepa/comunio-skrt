@@ -1,5 +1,14 @@
 ---
-import { PLAYER_POSITIONS, type PlayerFilters } from "../lib/players";
+import GooeySegment from "./GooeySegment";
+import { type PlayerFilters } from "../lib/players";
+
+const positionOptions = [
+  { value: "", label: "Alle" },
+  { value: "Torwart", label: "Torwart", shortLabel: "TW" },
+  { value: "Abwehr", label: "Abwehr", shortLabel: "ABW" },
+  { value: "Mittelfeld", label: "Mittelfeld", shortLabel: "MF" },
+  { value: "Sturm", label: "Sturm", shortLabel: "ST" },
+];
 
 type Props = {
   filters: PlayerFilters;
@@ -43,18 +52,14 @@ const resetHref = Astro.props.resetHref ?? action;
   </label>
   <fieldset class="space-y-2">
     <legend class="text-sm">Position</legend>
-    <div class="flex flex-wrap gap-2">
-      <label class:list={["inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-ring", !filters.position ? "border-primary bg-primary/15" : "border-border"]}>
-        <input class="sr-only" type="radio" name="position" value="" checked={!filters.position} />
-        Alle
-      </label>
-      {PLAYER_POSITIONS.map((value) => (
-        <label class:list={["inline-flex min-h-11 cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm focus-within:ring-2 focus-within:ring-ring", filters.position === value ? "border-primary bg-primary/15" : "border-border"]}>
-          <input class="sr-only" type="radio" name="position" value={value} checked={filters.position === value} />
-          {value}
-        </label>
-      ))}
-    </div>
+    <GooeySegment
+      client:load
+      name="position"
+      ariaLabel="Position"
+      fill="muted"
+      value={filters.position}
+      options={positionOptions}
+    />
   </fieldset>
   <div class="grid gap-3 sm:grid-cols-3">
     <label class="block text-sm">
