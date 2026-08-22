@@ -16,7 +16,7 @@ const { active = false, title = "Filter" } = Astro.props;
     {active ? <span class="filter-sheet-badge" aria-hidden="true"></span> : null}
     {active ? <span class="sr-only">aktiv</span> : null}
   </button>
-  <dialog class="filter-sheet-dialog" data-filter-dialog aria-labelledby="filter-sheet-title">
+  <dialog class="filter-sheet-dialog" data-filter-dialog aria-labelledby="filter-sheet-title" closedby="any">
     <div class="filter-sheet-panel">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h2 id="filter-sheet-title" class="text-lg font-semibold">{title}</h2>
@@ -29,6 +29,18 @@ const { active = false, title = "Filter" } = Astro.props;
   </dialog>
 </div>
 <script>
+  function clickOutsideSheet(dialog: HTMLDialogElement, event: MouseEvent) {
+    const box = dialog.getBoundingClientRect();
+    if (
+      event.clientX < box.left ||
+      event.clientX > box.right ||
+      event.clientY < box.top ||
+      event.clientY > box.bottom
+    ) {
+      dialog.close();
+    }
+  }
+
   function bind(root: Element) {
     if (root.hasAttribute("data-filter-bound")) return;
     root.setAttribute("data-filter-bound", "");
@@ -38,6 +50,7 @@ const { active = false, title = "Filter" } = Astro.props;
     if (!dialog || !open || !close) return;
     open.addEventListener("click", () => dialog.showModal());
     close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => clickOutsideSheet(dialog, event));
   }
   document.querySelectorAll(".filter-sheet").forEach((node) => bind(node));
   document.addEventListener("astro:page-load", () => {
