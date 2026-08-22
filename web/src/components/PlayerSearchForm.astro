@@ -5,11 +5,15 @@ type Props = {
   filters: PlayerFilters;
   clubs: string[];
   rival?: string;
+  action?: string;
+  resetHref?: string;
 };
 
 const { filters, clubs, rival } = Astro.props;
+const action = Astro.props.action ?? (rival !== undefined ? "/konkurrenz" : "/kader");
+const resetHref = Astro.props.resetHref ?? action;
 ---
-<form method="get" class="space-y-4">
+<form method="get" action={action} class="space-y-4">
   {
     rival !== undefined ? (
       <label class="block text-sm">
@@ -85,8 +89,9 @@ const { filters, clubs, rival } = Astro.props;
       />
     </label>
   </div>
+  <slot />
   <div class="flex flex-wrap gap-2">
     <button class="min-h-11 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground" type="submit">Filtern</button>
-    <a class="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm" href={rival !== undefined ? "/konkurrenz" : "/kader"}>Zurücksetzen</a>
+    <a class="inline-flex min-h-11 items-center rounded-md border border-border px-3 py-2 text-sm" href={resetHref}>Zurücksetzen</a>
   </div>
 </form>

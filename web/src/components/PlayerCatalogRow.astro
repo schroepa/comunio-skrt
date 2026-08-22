@@ -1,0 +1,53 @@
+---
+import { Badge } from "./ui/badge";
+import FormBars from "./FormBars.astro";
+import type { RadarRow } from "../lib/catalog";
+import { positionChip } from "../lib/radar-view";
+
+type Props = { row: RadarRow };
+
+const { row } = Astro.props;
+const chip = positionChip(row.player.position);
+
+const badgeClass: Record<string, string> = {
+  Kaufen: "bg-emerald-500/20 text-emerald-200",
+  Verkaufen: "bg-destructive/20 text-destructive",
+  Halten: "bg-muted text-muted-foreground",
+  Beobachten: "bg-amber-500/20 text-amber-200",
+  "Nicht verfügbar": "bg-destructive/20 text-destructive",
+  "Kein Signal": "bg-muted/50 text-muted-foreground",
+};
+---
+<article class="grid gap-3 border-b border-border/60 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+  <div class="flex min-w-0 items-start gap-3">
+    <span class:list={["mt-0.5 inline-flex h-7 min-w-9 items-center justify-center rounded px-1 text-[11px] font-semibold", chip.className]}>
+      {chip.code}
+    </span>
+    <div class="min-w-0">
+      <p class="truncate font-medium">
+        {row.player.name}
+        {row.inSquad ? <span class="ml-2 text-xs font-normal text-muted-foreground">Kader</span> : null}
+      </p>
+      <p class="truncate text-sm text-muted-foreground">
+        {row.player.verein} · {row.market.toLocaleString("de-DE")} €
+      </p>
+      <p class="mt-1 truncate text-xs text-muted-foreground" title={row.reason}>
+        {row.opponents}
+      </p>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-3 sm:justify-end">
+    <div class="text-right">
+      <p class="text-[11px] text-muted-foreground">Form</p>
+      {row.notes.length === 0 ? (
+        <p class="text-sm tabular-nums text-muted-foreground">—</p>
+      ) : (
+        <div class="flex items-end gap-2">
+          <FormBars notes={row.notes} />
+          <span class="text-sm tabular-nums">{row.form == null ? "—" : Math.round(row.form)}</span>
+        </div>
+      )}
+    </div>
+    <Badge className={badgeClass[row.badge]}>{row.badge}</Badge>
+  </div>
+</article>

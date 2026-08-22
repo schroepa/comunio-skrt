@@ -1,0 +1,15 @@
+---
+import { formBarHeights } from "../lib/radar-view";
+
+type Props = { notes: number[] };
+
+const heights = formBarHeights(Astro.props.notes);
+---
+<div class="flex h-8 items-end gap-0.5" aria-hidden="true">
+  {heights.map((height) => (
+    <span
+      class:list={["w-1.5 rounded-sm", height === 0 ? "bg-muted" : "bg-primary/80"]}
+      style={`height: ${height === 0 ? 12 : Math.max(18, height)}%`}
+    ></span>
+  ))}
+</div>

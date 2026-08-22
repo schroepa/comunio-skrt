@@ -1,16 +1,19 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
-import { Badge } from "../components/ui/badge";
+import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
+import PlayerSearchForm from "../components/PlayerSearchForm.astro";
 import { radarRows } from "../lib/catalog";
 import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
+import { filterPlayers, parsePlayerFilters, uniqueClubs } from "../lib/players";
+import { parseRadarSort, RADAR_SORTS, sortRadarRows } from "../lib/radar-view";
 import Shell from "../layouts/Shell.astro";
 
 const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
 const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
-const position = Astro.url.searchParams.get("position") ?? "";
+const filters = parsePlayerFilters(Astro.url.searchParams);
+const sort = parseRadarSort(Astro.url.searchParams);
 const onlySquad = Astro.url.searchParams.get("kader") === "1";
-const q = Astro.url.searchParams.get("q") ?? "";
 
 const [load, players, squad, ratings] = await Promise.all([
   listFixtures(db),
@@ -22,74 +25,49 @@ const matchday = load.ok && load.fixtures.length > 0 ? getNextMatchday(load.fixt
 const spieltag = matchday?.spieltag ?? 1;
 const availability = await listAvailability({ ...db, spieltag });
 const squadIds = new Set(squad.map((row) => row.player_id));
-let rows = radarRows(players, squadIds, ratings, availability, load.ok ? load.fixtures : [], spieltag);
-if (position) rows = rows.filter((row) => row.player.position === position);
-if (onlySquad) rows = rows.filter((row) => row.inSquad);
-if (q.trim()) {
-  const needle = q.trim().toLowerCase();
-  rows = radarRows(players, squadIds, ratings, availability, load.ok ? load.fixtures : [], spieltag).filter((row) =>
-    row.player.name.toLowerCase().includes(needle),
-  );
-  if (position) rows = rows.filter((row) => row.player.position === position);
-  if (onlySquad) rows = rows.filter((row) => row.inSquad);
-}
+const clubs = uniqueClubs(players);
 
-const badgeClass: Record<string, string> = {
-  Kaufen: "bg-emerald-500/20 text-emerald-200",
-  Verkaufen: "bg-destructive/20 text-destructive",
-  Halten: "bg-muted text-muted-foreground",
-  Beobachten: "bg-amber-500/20 text-amber-200",
-  "Nicht verfügbar": "bg-destructive/20 text-destructive",
-};
+let catalog = filterPlayers(players, filters);
+if (onlySquad) catalog = catalog.filter((player) => squadIds.has(player.id));
+
+const rows = sortRadarRows(
+  radarRows(catalog, squadIds, ratings, availability, load.ok ? load.fixtures : [], spieltag, {
+    includeHidden: true,
+  }),
+  sort,
+);
 ---
 <Shell title="Spieler-Radar" userEmail={user.email}>
   <h1 class="font-[Syne] text-3xl">Spieler-Radar</h1>
-  <form method="get" class="flex flex-wrap gap-2 text-sm">
-    <select class="rounded-full border border-border bg-card px-3 py-1.5" name="position">
-      <option value="">Position</option>
-      {["Torwart", "Abwehr", "Mittelfeld", "Sturm"].map((value) => (
-        <option value={value} selected={position === value}>{value}</option>
-      ))}
-    </select>
-    <button class="rounded-full border border-border px-3 py-1.5 text-muted-foreground" type="button" disabled>Preis</button>
-    <label class="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5">
-      <input type="checkbox" name="kader" value="1" checked={onlySquad} />
-      Nur mein Kader
-    </label>
-    <input class="rounded-full border border-border bg-card px-3 py-1.5" type="search" name="q" value={q} placeholder="Suche" />
-    <button class="rounded-full bg-primary px-3 py-1.5 text-primary-foreground" type="submit">Filtern</button>
-  </form>
-  <table class="mt-6 w-full text-left text-sm">
-    <caption class="sr-only">Spieler-Radar</caption>
-    <thead>
-      <tr class="border-b border-border text-muted-foreground">
-        <th class="py-2 pr-3 font-medium">Spieler</th>
-        <th class="py-2 pr-3 font-medium">Marktwert</th>
-        <th class="py-2 pr-3 font-medium">Form</th>
-        <th class="py-2 pr-3 font-medium">nächste 3 Gegner</th>
-        <th class="py-2 font-medium">Empfehlung</th>
-      </tr>
-    </thead>
-    <tbody>
-      {rows.length === 0 ? (
-        <tr>
-          <td class="py-6 text-muted-foreground" colspan="5">
-            <EmptyState body="Noch keine Spielerdaten." />
-          </td>
-        </tr>
-      ) : (
-        rows.map((row) => (
-          <tr class="border-b border-border/60">
-            <td class="py-2 pr-3">{row.player.name}</td>
-            <td class="py-2 pr-3 tabular-nums">{row.market.toLocaleString("de-DE")} €</td>
-            <td class="py-2 pr-3">{row.form == null ? "—" : Math.round(row.form)}</td>
-            <td class="py-2 pr-3">{row.opponents}</td>
-            <td class="py-2" title={row.reason}>
-              <Badge className={badgeClass[row.badge]}>{row.badge}</Badge>
-            </td>
-          </tr>
-        ))
-      )}
-    </tbody>
-  </table>
+  <p class="text-sm text-muted-foreground">Katalog der Liga. Filter und Sortierung kombinieren.</p>
+
+  <PlayerSearchForm filters={filters} clubs={clubs} action="/radar" resetHref="/radar">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="block text-sm">
+        Sortierung
+        <select class="mt-1 block rounded-md border border-border bg-card px-3 py-2" name="sort">
+          {RADAR_SORTS.map((option) => (
+            <option value={option.value} selected={sort === option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+      <label class="inline-flex min-h-11 items-center gap-2 text-sm">
+        <input type="checkbox" name="kader" value="1" checked={onlySquad} />
+        Nur mein Kader
+      </label>
+    </div>
+  </PlayerSearchForm>
+
+  {rows.length === 0 ? (
+    <EmptyState body="Noch keine Spielerdaten." />
+  ) : (
+    <div class="mt-2">
+      <p class="mb-2 text-sm text-muted-foreground">{rows.length.toLocaleString("de-DE")} Spieler</p>
+      <div>
+        {rows.map((row) => (
+          <PlayerCatalogRow row={row} />
+        ))}
+      </div>
+    </div>
+  )}
 </Shell>

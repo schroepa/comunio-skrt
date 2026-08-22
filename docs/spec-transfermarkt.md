@@ -31,12 +31,10 @@ Textbaustein-System statt freiem Text: „[Form-Trend] + [Fixture-Aussage] + [Pr
 ## UI
 
 Haupt-Screen „Spieler-Radar":
-- Kompakte Tabelle statt Card-Grid (skaliert besser bei 20+ Spielern)
-- Ein Primärsignal (Empfehlungs-Badge) pro Zeile
-- Details per **Hover-Tooltip**, nicht per Klick-Navigation — die Begründungszeile erscheint im Tooltip
-- Spalten: Spieler, Marktwert (+ Sparkline), Form (5 Mini-Balken), nächste 3 Gegner (Schwierigkeits-Punkte), Empfehlung (Badge)
-- Filter: Position, Preis-Range, „Nur mein Kader"-Toggle
-- Farbcodierung: Kaufen = grün, Verkaufen = rot, Halten = neutral, Beobachten = amber
+- **Voller Katalog** sichtbar (auch ohne Filter); schwache Outsider als „Kein Signal“ statt ausgeblendet
+- Dichte Zeile: Positions-Chip, Name, Verein, Marktwert, Form-Balken, Badge
+- Filter: Name, Position, Verein, Marktwert, „Nur mein Kader“
+- Sortierung: Form (Default), Marktwert, Empfehlung, Name
 
 **Mobile:** nicht Teil dieses V1-Schnitts. Später eigene Layouts (eine Spalte, Filter als Sheet) — `docs/superpowers/specs/2026-08-22-spieleruebersicht-mobile-design.md`.
 

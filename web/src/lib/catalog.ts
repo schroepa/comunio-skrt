@@ -71,8 +71,9 @@ export type RadarRow = {
   player: PlayerRecord;
   market: number;
   form: number | null;
+  notes: number[];
   opponents: string;
-  badge: RadarBadge;
+  badge: RadarBadge | "Kein Signal";
   reason: string;
   inSquad: boolean;
 };
@@ -84,6 +85,7 @@ export function radarRows(
   availability: AvailabilityRecord[],
   fixtures: FixtureRecord[],
   spieltag: number,
+  options: { includeHidden?: boolean } = {},
 ): RadarRow[] {
   const statusByPlayer = new Map(
     availability.filter((row) => row.spieltag === spieltag).map((row) => [row.player_id, asStatus(row.status)]),
@@ -101,16 +103,22 @@ export function radarRows(
     const price = priceScore(player.aktueller_marktwert, peers.get(player.position) ?? []);
     const gate = availabilityGate(statusByPlayer.get(player.id) ?? null);
     const inSquad = squadIds.has(player.id);
-    const badge = radarBadge({ inSquad, form, price, gate });
-    if (badge === "hidden") continue;
+    const rawBadge = radarBadge({ inSquad, form, price, gate });
+    if (rawBadge === "hidden" && !options.includeHidden) continue;
+    const badge = rawBadge === "hidden" ? "Kein Signal" : rawBadge;
     const trend = formTrend(notes);
     rows.push({
       player,
       market: player.aktueller_marktwert,
       form,
+      notes: notes.slice(0, 5),
       opponents: nextOpponents(player, fixtures),
       badge,
-      reason: radarReason({ trend, badge, priceVsForm: priceVsForm(form, price) }),
+      reason: radarReason({
+        trend,
+        badge: badge === "Kein Signal" ? "Beobachten" : badge,
+        priceVsForm: priceVsForm(form, price),
+      }),
       inSquad,
     });
   }
