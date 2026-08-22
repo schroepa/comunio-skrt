@@ -16,8 +16,8 @@ const fmt = new Intl.DateTimeFormat("de-DE", {
 });
 ---
 <section class="space-y-3">
-  <h2 class="font-[Syne] text-xl">Nächste Spiele · Spieltag {spieltag}</h2>
-  <ul class="divide-y divide-border rounded-lg border border-border">
+  <h2 class="text-xl font-semibold">Nächste Spiele · Spieltag {spieltag}</h2>
+  <ul class="divide-y divide-border rounded-lg border border-border bg-surface">
     {fixtures.map((match) => (
       <li class="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <span>

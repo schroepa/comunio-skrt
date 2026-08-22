@@ -1,5 +1,6 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import PageHeader from "../components/PageHeader.astro";
 import { Badge } from "../components/ui/badge";
 import { kaderAlerts } from "../lib/catalog";
 import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
@@ -19,28 +20,42 @@ const [players, squad, ratings, availability] = await Promise.all([
 ]);
 const alerts = kaderAlerts(squad, players, availability, ratings, spieltag);
 ---
-<Shell title="Kader-Check vor Spieltag-Deadline" userEmail={user.email}>
-  <h1 class="font-[Syne] text-3xl">Kader-Check vor Spieltag-Deadline</h1>
-  <p class="text-sm text-muted-foreground">
-    <Badge variant="destructive">Startet nicht</Badge>
-    bei Verletzung oder Sperre,
-    <Badge className="bg-amber-500/20 text-amber-200">Unsicher, prüfen</Badge>
-    / <Badge className="bg-amber-500/20 text-amber-200">Wenig Spielzeit zuletzt</Badge>.
-  </p>
-  {alerts.length === 0 ? (
-    <EmptyState body="Sobald Spieler im Kader und Verfügbarkeit gepflegt sind, erscheinen Warnungen hier." />
+<Shell title="Kader-Check" userEmail={user.email}>
+  <PageHeader title="Kader-Check" lead="Wer vor der Deadline nicht in die Elf gehört — verletzt, gesperrt oder unsicher." />
+  <dl class="grid gap-2 text-sm sm:grid-cols-2">
+    <div class="flex items-center gap-2">
+      <dt><Badge variant="destructive">Startet nicht</Badge></dt>
+      <dd class="text-muted-foreground">Verletzt oder gesperrt — nicht aufstellen.</dd>
+    </div>
+    <div class="flex items-center gap-2">
+      <dt><Badge className="bg-warning/20 text-warning-foreground">Prüfen</Badge></dt>
+      <dd class="text-muted-foreground">Fraglich oder wenig Spielzeit zuletzt.</dd>
+    </div>
+  </dl>
+  {squad.length === 0 ? (
+    <EmptyState body="Lege zuerst deinen Kader an. Danach prüfen wir Verletzung, Sperre und Spielzeit." href="/kader" cta="Zum Kader" />
+  ) : alerts.length === 0 ? (
+    <EmptyState title="Alles klar" body="Niemand im Kader ist verletzt, gesperrt oder unsicher." href="/aufstellung" cta="Zur Aufstellung" />
   ) : (
-    <ul aria-label="Kader-Warnungen" class="mt-4 space-y-3">
-      {alerts.map((alert) => (
-        <li class="flex items-center justify-between gap-3 border-b border-border py-2 text-sm">
-          <span>{alert.player}</span>
-          {alert.tone === "block" ? (
-            <Badge variant="destructive">{alert.badge}</Badge>
-          ) : (
-            <Badge className="bg-amber-500/20 text-amber-200">{alert.badge}</Badge>
-          )}
-        </li>
-      ))}
-    </ul>
+    <div class="space-y-4">
+      <ul aria-label="Kader-Warnungen" class="space-y-3">
+        {alerts.map((alert) => (
+          <li class="flex min-h-11 items-center justify-between gap-3 border-b border-border py-2 text-sm">
+            <span>
+              {alert.player}
+              <span class="mt-0.5 block text-muted-foreground">
+                {alert.tone === "block" ? "Nicht aufstellen." : "Vor der Deadline nochmal prüfen."}
+              </span>
+            </span>
+            {alert.tone === "block" ? (
+              <Badge variant="destructive">{alert.badge}</Badge>
+            ) : (
+              <Badge className="bg-warning/20 text-warning-foreground">{alert.badge}</Badge>
+            )}
+          </li>
+        ))}
+      </ul>
+      <a class="text-link inline-flex min-h-11 items-center" href="/aufstellung">Zur vorgeschlagenen Aufstellung</a>
+    </div>
   )}
 </Shell>

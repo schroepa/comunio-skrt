@@ -25,7 +25,7 @@ const badgeClass: Record<string, string> = {
   "Kein Signal": "bg-muted/50 text-muted-foreground",
 };
 ---
-<article class="grid gap-3 border-b border-border/60 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+<article class="grid gap-3 overflow-x-hidden border-b border-border/60 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
   <div class="flex min-w-0 items-start gap-3">
     <span class:list={["mt-0.5 inline-flex h-7 min-w-9 items-center justify-center rounded px-1 text-[11px] font-semibold", chip.className]}>
       {chip.code}
