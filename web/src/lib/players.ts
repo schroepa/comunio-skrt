@@ -39,6 +39,13 @@ export function hasPlayerFilters(filters: PlayerFilters): boolean {
   );
 }
 
+export function catalogFiltersActive(
+  filters: PlayerFilters,
+  extras: { onlySquad?: boolean; sortChanged?: boolean } = {},
+): boolean {
+  return hasPlayerFilters(filters) || Boolean(extras.onlySquad) || Boolean(extras.sortChanged);
+}
+
 export function uniqueClubs(players: Array<Pick<PlayerRecord, "verein">>): string[] {
   return [...new Set(players.map((player) => player.verein).filter((name) => name.length > 0))].sort((a, b) =>
     a.localeCompare(b, "de"),

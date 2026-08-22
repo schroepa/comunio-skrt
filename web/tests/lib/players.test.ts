@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { filterPlayers, hasPlayerFilters, parsePlayerFilters, uniqueClubs } from "../../src/lib/players";
+import {
+  catalogFiltersActive,
+  filterPlayers,
+  hasPlayerFilters,
+  parsePlayerFilters,
+  uniqueClubs,
+} from "../../src/lib/players";
 import type { PlayerRecord } from "../../src/lib/directus";
 
 function player(partial: Partial<PlayerRecord> & Pick<PlayerRecord, "id" | "name">): PlayerRecord {
@@ -83,5 +89,20 @@ describe("uniqueClubs", () => {
       "TSG Hoffenheim",
       "VfB Stuttgart",
     ]);
+  });
+});
+
+describe("catalogFiltersActive", () => {
+  const empty = { q: "", position: "", verein: "", mwMin: null, mwMax: null };
+
+  it("is false when catalog query is default", () => {
+    expect(catalogFiltersActive(empty)).toBe(false);
+    expect(catalogFiltersActive(empty, { onlySquad: false, sortChanged: false })).toBe(false);
+  });
+
+  it("is true for player filters, squad-only, or non-default sort", () => {
+    expect(catalogFiltersActive({ ...empty, q: "Undav" })).toBe(true);
+    expect(catalogFiltersActive(empty, { onlySquad: true })).toBe(true);
+    expect(catalogFiltersActive(empty, { sortChanged: true })).toBe(true);
   });
 });
