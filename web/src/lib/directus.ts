@@ -135,6 +135,8 @@ export type AvailabilityRecord = {
   status: string;
 };
 
+export type ValueHistoryRecord = { player_id: number; datum: string; marktwert: number };
+
 export type CompetitorRow = {
   id: number;
   competitor_name: string;

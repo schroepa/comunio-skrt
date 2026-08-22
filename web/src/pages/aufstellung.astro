@@ -2,6 +2,7 @@
 import EmptyState from "../components/EmptyState.astro";
 import Pitch from "../components/Pitch.astro";
 import { playerPoints } from "../lib/catalog";
+import { clubValues } from "../lib/clubs";
 import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
 import { pickLineup, type LineupCandidate } from "../lib/lineup";
@@ -19,6 +20,7 @@ const [players, squad, ratings, availability] = await Promise.all([
   listAvailability({ ...db, spieltag }),
 ]);
 const byId = new Map(players.map((player) => [player.id, player]));
+const clubValueMap = clubValues(players);
 const candidates: LineupCandidate[] = [];
 for (const row of squad) {
   const player = byId.get(row.player_id);
@@ -26,7 +28,7 @@ for (const row of squad) {
   if (player.position !== "Torwart" && player.position !== "Abwehr" && player.position !== "Mittelfeld" && player.position !== "Sturm") {
     continue;
   }
-  const stats = playerPoints(player, ratings, availability, load.ok ? load.fixtures : [], spieltag);
+  const stats = playerPoints(player, ratings, availability, load.ok ? load.fixtures : [], spieltag, clubValueMap);
   candidates.push({
     id: player.id,
     position: player.position,
