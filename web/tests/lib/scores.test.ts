@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixtureModifier, fixtureText, formScore, radarBadge } from "../../src/lib/scores";
+import { fixtureModifier, fixtureText, formScore, priceScore, radarBadge } from "../../src/lib/scores";
 
 describe("formScore", () => {
   it("returns null without notes", () => {
@@ -37,5 +37,20 @@ describe("fixtureText", () => {
     expect(fixtureText(1, 1)).toBe("günstige Gegner");
     expect(fixtureText(-1, 2)).toBe("schwere Gegner");
     expect(fixtureText(0, 3)).toBe("gemischte Gegner");
+  });
+});
+
+describe("priceScore", () => {
+  const peers = [10, 20, 30];
+
+  it("stays peer-only without a usable previous value", () => {
+    expect(priceScore(20, peers)).toBe(50);
+    expect(priceScore(20, peers, null)).toBe(50);
+    expect(priceScore(20, peers, 0)).toBe(50);
+  });
+
+  it("mixes 60% peer and 40% trend when history exists", () => {
+    expect(priceScore(20, peers, 20 / 1.2)).toBe(70);
+    expect(priceScore(20, peers, 20 / 0.8)).toBe(30);
   });
 });

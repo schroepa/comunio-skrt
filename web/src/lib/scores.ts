@@ -13,12 +13,19 @@ export function formScore(notesNewestFirst: number[]): number | null {
   return weighted / weightSum;
 }
 
-export function priceScore(value: number, peerValues: number[]): number {
-  if (peerValues.length <= 1) return 50;
-  const sorted = [...peerValues].sort((a, b) => a - b);
-  const index = sorted.findIndex((peer) => peer >= value);
-  const rank = index === -1 ? sorted.length - 1 : index;
-  return (rank / (sorted.length - 1)) * 100;
+export function priceScore(value: number, peerValues: number[], previousValue?: number | null): number {
+  const peer =
+    peerValues.length <= 1
+      ? 50
+      : (() => {
+          const sorted = [...peerValues].sort((a, b) => a - b);
+          const index = sorted.findIndex((peer) => peer >= value);
+          const rank = index === -1 ? sorted.length - 1 : index;
+          return (rank / (sorted.length - 1)) * 100;
+        })();
+  if (previousValue == null || previousValue <= 0) return peer;
+  const trend = Math.min(100, Math.max(0, 50 + ((value - previousValue) / previousValue) * 250));
+  return 0.6 * peer + 0.4 * trend;
 }
 
 export type RadarBadge = "Kaufen" | "Verkaufen" | "Halten" | "Beobachten" | "Nicht verfügbar";
