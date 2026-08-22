@@ -66,3 +66,21 @@ export function priceVsForm(form: number | null, price: number): "hinkt" | "pass
   if (divergence <= -15) return "voraus";
   return "passt";
 }
+
+export type FixtureModifier = -1 | 0 | 1;
+export type FixtureText = "günstige Gegner" | "gemischte Gegner" | "schwere Gegner" | "Gegner unbekannt";
+
+export function fixtureModifier(opponentPercentiles: number[]): FixtureModifier {
+  if (opponentPercentiles.length === 0) return 0;
+  const mean = opponentPercentiles.reduce((sum, value) => sum + value, 0) / opponentPercentiles.length;
+  if (mean < 100 / 3) return 1;
+  if (mean > 200 / 3) return -1;
+  return 0;
+}
+
+export function fixtureText(modifier: FixtureModifier, percentileCount: number): FixtureText {
+  if (percentileCount === 0) return "Gegner unbekannt";
+  if (modifier === 1) return "günstige Gegner";
+  if (modifier === -1) return "schwere Gegner";
+  return "gemischte Gegner";
+}

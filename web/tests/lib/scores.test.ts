@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formScore, radarBadge } from "../../src/lib/scores";
+import { fixtureModifier, fixtureText, formScore, radarBadge } from "../../src/lib/scores";
 
 describe("formScore", () => {
   it("returns null without notes", () => {
@@ -19,5 +19,23 @@ describe("radarBadge", () => {
 
   it("marks strong outsiders as buy", () => {
     expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok" })).toBe("Kaufen");
+  });
+});
+
+describe("fixtureModifier", () => {
+  it("returns 0 for an empty list, +1 below one third, -1 above two thirds", () => {
+    expect(fixtureModifier([])).toBe(0);
+    expect(fixtureModifier([20])).toBe(1);
+    expect(fixtureModifier([50])).toBe(0);
+    expect(fixtureModifier([80])).toBe(-1);
+  });
+});
+
+describe("fixtureText", () => {
+  it("uses unknown copy when no percentiles exist", () => {
+    expect(fixtureText(0, 0)).toBe("Gegner unbekannt");
+    expect(fixtureText(1, 1)).toBe("günstige Gegner");
+    expect(fixtureText(-1, 2)).toBe("schwere Gegner");
+    expect(fixtureText(0, 3)).toBe("gemischte Gegner");
   });
 });
