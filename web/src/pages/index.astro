@@ -49,8 +49,8 @@ const signals = radarRows(
 <Shell title="Übersicht" userEmail={user.email}>
   <PageHeader title="Übersicht" lead="Was vor der Deadline zählt: Warnungen, Transfer-Signale, Spiele. Deadline und Budget stecken im Menü." />
 
-  <div class="grid gap-6 xl:grid-cols-12">
-    <div class="order-1 space-y-6 xl:order-2 xl:col-span-5">
+  <div class="grid gap-6 lg:grid-cols-12">
+    <div class="order-1 space-y-6 lg:order-2 lg:col-span-5">
       <Card>
         <CardHeader>
           <CardTitle>Posteingang · Kader-Check</CardTitle>
@@ -105,7 +105,7 @@ const signals = radarRows(
       </Card>
     </div>
 
-    <section class="order-2 min-w-0 xl:order-1 xl:col-span-7">
+    <section class="order-2 min-w-0 lg:order-1 lg:col-span-7">
       {scheduleError ? (
         <div class="space-y-3">
           <h2 class="text-xl font-semibold">Nächste Spiele</h2>
