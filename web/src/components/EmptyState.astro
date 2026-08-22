@@ -2,10 +2,17 @@
 interface Props {
   title?: string;
   body: string;
+  href?: string;
+  cta?: string;
 }
-const { title, body } = Astro.props;
+const { title, body, href, cta } = Astro.props;
 ---
 <div class="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
   {title ? <p class="mb-1 font-medium text-foreground">{title}</p> : null}
-  <p>{body}</p>
+  <p class="text-pretty leading-relaxed">{body}</p>
+  {href && cta ? (
+    <p class="mt-3">
+      <a class="text-link inline-flex min-h-11 items-center" href={href}>{cta}</a>
+    </p>
+  ) : null}
 </div>

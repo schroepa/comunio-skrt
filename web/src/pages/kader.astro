@@ -84,7 +84,7 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
     <input type="hidden" name="action" value="budget" />
     <label class="text-sm">
       Budget (Comunio)
-      <input class="mt-1 block rounded-md border border-border bg-card px-3 py-2" type="number" name="budget" min="0" value={profile?.budget ?? ""} />
+      <input class="mt-1 block min-h-11 w-full max-w-xs rounded-md border border-border bg-card px-3 py-2" type="number" name="budget" min="0" value={profile?.budget ?? ""} />
     </label>
     <button class="min-h-11 rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Budget speichern</button>
   </form>
