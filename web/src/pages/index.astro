@@ -4,13 +4,14 @@ import EmptyState from "../components/EmptyState.astro";
 import MatchList from "../components/MatchList.astro";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { kaderAlerts, radarRows } from "../lib/catalog";
+import { kaderAlerts, marketMovers, pickTopSignals, radarRows } from "../lib/catalog";
 import {
   listAvailability,
   listFixtures,
   listPlayers,
   listRatings,
   listSquad,
+  listValueHistory,
   getManagerProfile,
 } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
@@ -21,12 +22,13 @@ const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
 const db = { url: supabaseUrl, anonKey: supabaseAnonKey, token: accessToken };
 const now = new Date();
 
-const [load, players, squad, ratings, profile] = await Promise.all([
+const [load, players, squad, ratings, profile, history] = await Promise.all([
   listFixtures(db),
   listPlayers(db),
   listSquad({ ...db, userId: user.id }),
   listRatings(db),
   getManagerProfile({ ...db, userId: user.id }),
+  listValueHistory(db),
 ]);
 
 const scheduleError =
@@ -50,14 +52,17 @@ const values = squad
 const value = squadValue(values);
 const remaining = budgetRemaining(profile?.budget, value);
 const alerts = kaderAlerts(squad, players, availability, ratings, spieltag);
-const signals = radarRows(
+const rows = radarRows(
   players,
   new Set(squad.map((row) => row.player_id)),
   ratings,
   availability,
   load.ok ? load.fixtures : [],
   spieltag,
-).filter((row) => row.badge === "Kaufen" || row.badge === "Verkaufen");
+  { history },
+);
+const signals = pickTopSignals(rows);
+const movers = marketMovers(players, history);
 ---
 <Shell title="Dashboard" userEmail={user.email}>
   <h1 class="font-[Syne] text-3xl">Dashboard</h1>
@@ -143,7 +148,7 @@ const signals = radarRows(
       <EmptyState body="Kauf-/Verkaufssignale brauchen Noten und Marktwerte." />
     ) : (
       <ul class="space-y-2">
-        {signals.slice(0, 3).map((row) => (
+        {signals.map((row) => (
           <li class="text-sm">
             {row.player.name} · {row.badge}
             <span class="block text-muted-foreground">{row.reason}</span>
@@ -152,5 +157,35 @@ const signals = radarRows(
       </ul>
     )}
     <a href="/radar">Zum Spieler-Radar</a>
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="font-[Syne] text-xl">Marktwert</h2>
+    {movers.gainers.length === 0 && movers.losers.length === 0 ? (
+      <EmptyState body="Noch kein Marktwert-Verlauf." />
+    ) : (
+      <div class="grid gap-4 sm:grid-cols-2">
+        <ul class="space-y-2">
+          {movers.gainers.map((item) => (
+            <li class="text-sm">
+              {item.player.name}
+              <span class="block tabular-nums text-muted-foreground">
+                +{item.delta.toLocaleString("de-DE")} €
+              </span>
+            </li>
+          ))}
+        </ul>
+        <ul class="space-y-2">
+          {movers.losers.map((item) => (
+            <li class="text-sm">
+              {item.player.name}
+              <span class="block tabular-nums text-muted-foreground">
+                −{Math.abs(item.delta).toLocaleString("de-DE")} €
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
   </section>
 </Shell>
