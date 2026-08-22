@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { nextOpponents, previousMarketValue, radarRows, venueFor } from "../../src/lib/catalog";
+import {
+  marketMovers,
+  nextOpponents,
+  pickTopSignals,
+  previousMarketValue,
+  radarRows,
+  type RadarRow,
+  venueFor,
+} from "../../src/lib/catalog";
 import type { PlayerRecord, ValueHistoryRecord } from "../../src/lib/directus";
 import type { FixtureRecord } from "../../src/lib/fixtures";
 
@@ -54,5 +62,56 @@ describe("radarRows", () => {
     expect(row?.opponents).toBe("1899 Hoffenheim");
     expect(row?.reason).not.toMatch(/ohne Mapping/);
     expect(row?.reason).toMatch(/Gegner/);
+  });
+});
+
+function row(partial: Pick<RadarRow, "badge" | "divergence" | "player">): RadarRow {
+  return {
+    market: 1,
+    form: 80,
+    notes: [],
+    opponents: "—",
+    reason: "",
+    inSquad: false,
+    ...partial,
+  };
+}
+
+describe("pickTopSignals", () => {
+  it("returns two buys by divergence then one sell", () => {
+    const picked = pickTopSignals([
+      row({ badge: "Kaufen", divergence: 20, player: mid }),
+      row({ badge: "Verkaufen", divergence: -40, player: cheap }),
+      row({ badge: "Beobachten", divergence: 10, player: mid }),
+      row({ badge: "Kaufen", divergence: 40, player: bayern }),
+      row({ badge: "Kaufen", divergence: 30, player: cheap }),
+    ]);
+    expect(picked.map((item) => [item.badge, item.divergence])).toEqual([
+      ["Kaufen", 40],
+      ["Kaufen", 30],
+      ["Verkaufen", -40],
+    ]);
+  });
+});
+
+describe("marketMovers", () => {
+  it("takes three gainers and three losers and skips single-point history", () => {
+    const squad = [
+      player({ id: 1, name: "Aaa", aktueller_marktwert: 120 }),
+      player({ id: 2, name: "Bbb", aktueller_marktwert: 50 }),
+      player({ id: 3, name: "Ccc", aktueller_marktwert: 10 }),
+    ];
+    const history: ValueHistoryRecord[] = [
+      { player_id: 1, datum: "2026-08-21", marktwert: 120 },
+      { player_id: 1, datum: "2026-08-14", marktwert: 100 },
+      { player_id: 2, datum: "2026-08-21", marktwert: 50 },
+      { player_id: 2, datum: "2026-08-14", marktwert: 80 },
+      { player_id: 3, datum: "2026-08-21", marktwert: 10 },
+    ];
+    const { gainers, losers } = marketMovers(squad, history);
+    expect(gainers.map((item) => item.player.id)).toEqual([1]);
+    expect(gainers[0].delta).toBe(20);
+    expect(losers.map((item) => item.player.id)).toEqual([2]);
+    expect(losers[0].delta).toBe(-30);
   });
 });

@@ -158,6 +158,46 @@ export function radarRows(
   return rows;
 }
 
+export function pickTopSignals(rows: RadarRow[]): RadarRow[] {
+  const byDivDesc = (a: RadarRow, b: RadarRow) => {
+    if (a.divergence == null && b.divergence == null) return a.player.name.localeCompare(b.player.name, "de");
+    if (a.divergence == null) return 1;
+    if (b.divergence == null) return -1;
+    return b.divergence - a.divergence;
+  };
+  const buys = rows.filter((row) => row.badge === "Kaufen").sort(byDivDesc).slice(0, 2);
+  const sells = rows
+    .filter((row) => row.badge === "Verkaufen")
+    .sort((a, b) => {
+      if (a.divergence == null && b.divergence == null) return a.player.name.localeCompare(b.player.name, "de");
+      if (a.divergence == null) return 1;
+      if (b.divergence == null) return -1;
+      return a.divergence - b.divergence;
+    })
+    .slice(0, 1);
+  return [...buys, ...sells];
+}
+
+export type MarketMover = { player: PlayerRecord; delta: number };
+
+export function marketMovers(
+  players: PlayerRecord[],
+  history: ValueHistoryRecord[],
+): { gainers: MarketMover[]; losers: MarketMover[] } {
+  const movers: MarketMover[] = [];
+  for (const player of players) {
+    const previous = previousMarketValue(player.id, history);
+    if (previous == null) continue;
+    const delta = player.aktueller_marktwert - previous;
+    if (delta === 0) continue;
+    movers.push({ player, delta });
+  }
+  const byName = (a: MarketMover, b: MarketMover) => a.player.name.localeCompare(b.player.name, "de");
+  const gainers = movers.filter((item) => item.delta > 0).sort((a, b) => b.delta - a.delta || byName(a, b)).slice(0, 3);
+  const losers = movers.filter((item) => item.delta < 0).sort((a, b) => a.delta - b.delta || byName(a, b)).slice(0, 3);
+  return { gainers, losers };
+}
+
 export function playerPoints(
   player: PlayerRecord,
   ratings: RatingRecord[],
