@@ -232,6 +232,25 @@ export async function listRatings(options: CatalogAuth) {
   );
 }
 
+function isValueHistory(value: unknown): value is ValueHistoryRecord {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.player_id === "number" &&
+    typeof row.datum === "string" &&
+    row.datum.length > 0 &&
+    typeof row.marktwert === "number"
+  );
+}
+
+export async function listValueHistory(options: CatalogAuth) {
+  const rows = await getItems<unknown>({
+    ...options,
+    path: "/rest/v1/value_history?select=player_id,datum,marktwert&order=datum.desc&limit=20000",
+  });
+  return (rows ?? []).filter(isValueHistory);
+}
+
 export async function listAvailability(options: CatalogAuth & { spieltag: number }) {
   return (
     (await getItems<AvailabilityRecord>({
