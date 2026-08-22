@@ -26,7 +26,7 @@ function shirtName(name: string): string {
 <section class="space-y-3" aria-labelledby="pitch-heading">
   <div class="flex flex-wrap items-end justify-between gap-2">
     <div>
-      <h2 id="pitch-heading" class="font-[Syne] text-xl">Spielfeld</h2>
+      <h2 id="pitch-heading" class="text-xl font-semibold">Spielfeld</h2>
       <p class="text-sm text-muted-foreground">
         Formation {formation} · {total.toLocaleString("de-DE")} erwartete Punkte
       </p>
@@ -46,14 +46,15 @@ function shirtName(name: string): string {
 
   <div class="pitch" aria-hidden="true">
     <div class="pitch-mark pitch-halfway"></div>
-    <div class="pitch-mark pitch-circle"></div>
-    <div class="pitch-mark pitch-box-top"></div>
-    <div class="pitch-mark pitch-box-bottom"></div>
-    <div class="relative z-10 flex h-full flex-col justify-between px-2 py-5 sm:px-6 sm:py-7">
+    <div class="pitch-mark pitch-arc"></div>
+    <div class="pitch-mark pitch-box"></div>
+    <div class="pitch-mark pitch-six"></div>
+    <div class="pitch-mark pitch-goal"></div>
+    <div class="relative z-10 flex h-full flex-col justify-between px-2 py-4 sm:px-5 sm:py-5">
       {rows.map((line) => {
         const group = eleven.filter((row) => row.position === line.key);
         return (
-          <div class="flex min-h-16 flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <div class="flex min-h-12 flex-wrap items-center justify-center gap-2 sm:min-h-14 sm:gap-3">
             {group.map((row) => {
               const player = playersById[String(row.id)];
               const name = player?.name ?? `Spieler ${row.id}`;
@@ -72,10 +73,11 @@ function shirtName(name: string): string {
 </section>
 
 <style>
+  /* Eine Hälfte: eigene Torlinie unten, Mittellinie oben. */
   .pitch {
     position: relative;
     overflow: hidden;
-    min-height: 28rem;
+    min-height: 18rem;
     border-radius: 1rem;
     border: 1px solid color-mix(in oklch, var(--color-primary) 28%, transparent);
     background:
@@ -83,68 +85,78 @@ function shirtName(name: string): string {
       repeating-linear-gradient(
         180deg,
         transparent 0,
-        transparent 3.4rem,
-        oklch(1 0 0 / 0.035) 3.4rem,
-        oklch(1 0 0 / 0.035) 6.8rem
+        transparent 2.4rem,
+        oklch(1 0 0 / 0.035) 2.4rem,
+        oklch(1 0 0 / 0.035) 4.8rem
       );
   }
 
   .pitch-mark {
     pointer-events: none;
     position: absolute;
-    border: 1.5px solid oklch(0.92 0.04 105 / 0.22);
+    border: 1.5px solid oklch(0.92 0.04 105 / 0.28);
   }
 
   .pitch-halfway {
-    left: 8%;
-    right: 8%;
-    top: 50%;
+    left: 6%;
+    right: 6%;
+    top: 0;
     height: 0;
   }
 
-  .pitch-circle {
-    width: 5.5rem;
-    height: 5.5rem;
+  .pitch-arc {
+    width: 4.5rem;
+    height: 2.25rem;
     left: 50%;
-    top: 50%;
-    border-radius: 999px;
-    transform: translate(-50%, -50%);
-  }
-
-  .pitch-box-top,
-  .pitch-box-bottom {
-    left: 22%;
-    right: 22%;
-    height: 3.4rem;
-  }
-
-  .pitch-box-top {
     top: 0;
+    border-radius: 0 0 999px 999px;
     border-top: 0;
+    transform: translateX(-50%);
   }
 
-  .pitch-box-bottom {
+  .pitch-box {
+    left: 18%;
+    right: 18%;
     bottom: 0;
+    height: 4.25rem;
     border-bottom: 0;
   }
 
+  .pitch-six {
+    left: 32%;
+    right: 32%;
+    bottom: 0;
+    height: 1.75rem;
+    border-bottom: 0;
+  }
+
+  .pitch-goal {
+    width: 2.75rem;
+    height: 0.45rem;
+    left: 50%;
+    bottom: 0;
+    border-bottom: 0;
+    transform: translateX(-50%);
+    background: oklch(0.92 0.04 105 / 0.2);
+  }
+
   .player-chip {
-    min-width: 5.5rem;
-    max-width: 7.5rem;
+    min-width: 5.25rem;
+    max-width: 7.25rem;
     border-radius: 0.75rem;
     border: 1px solid color-mix(in oklch, var(--color-primary) 35%, var(--color-border));
     background: oklch(0.16 0.03 155 / 0.88);
-    padding: 0.4rem 0.55rem;
+    padding: 0.35rem 0.5rem;
     text-align: center;
     font-size: 0.75rem;
   }
 
   @media (min-width: 640px) {
     .pitch {
-      min-height: 34rem;
+      min-height: 22rem;
     }
     .player-chip {
-      min-width: 6.5rem;
+      min-width: 6.25rem;
       font-size: 0.8125rem;
     }
   }

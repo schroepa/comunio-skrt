@@ -24,7 +24,7 @@ Output: Liste 11 IDs + Bank (übriger Kader) + Summe erwarteter Punkte + Formati
 ## UI `/aufstellung`
 
 - Überschrift „Aufstellung“
-- Vorgeschlagene Elf gruppiert nach Position, erwartete Punkte pro Kopf, Summe.
+- Vorgeschlagene Elf auf **einer Spielfeldhälfte** (eigene Torlinie unten, Mittellinie oben), erwartete Punkte pro Kopf, Summe.
 - Button „Neu berechnen“ lädt die Seite neu (SSR).
 - Leer: „Kader ist zu klein für eine Elf“ oder Kader-Check-Hinweis wenn alle TW blockiert sind.
 
