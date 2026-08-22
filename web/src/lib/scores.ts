@@ -29,22 +29,26 @@ export function priceScore(value: number, peerValues: number[], previousValue?: 
 }
 
 export type RadarBadge = "Kaufen" | "Verkaufen" | "Halten" | "Beobachten" | "Nicht verfügbar";
+export type FixtureModifier = -1 | 0 | 1;
+export type FixtureText = "günstige Gegner" | "gemischte Gegner" | "schwere Gegner" | "Gegner unbekannt";
 
 export function radarBadge(options: {
   inSquad: boolean;
   form: number | null;
   price: number;
   gate: "block" | "warn" | "ok";
+  modifier?: FixtureModifier;
 }): RadarBadge | "hidden" {
   if (options.gate === "block") return "Nicht verfügbar";
   if (options.form == null) return options.inSquad ? "Beobachten" : "hidden";
   const divergence = options.form - options.price;
+  const modifier = options.modifier ?? 0;
   if (options.inSquad) {
     if (divergence <= -15) return "Verkaufen";
     if (divergence > 5) return "Halten";
     return "Beobachten";
   }
-  if (divergence >= 15) return "Kaufen";
+  if (divergence >= 15) return modifier >= 0 ? "Kaufen" : "Beobachten";
   if (divergence > 5) return "Beobachten";
   return "hidden";
 }
@@ -60,10 +64,11 @@ export function formTrend(notesNewestFirst: number[]): "steigend" | "stabil" | "
 
 export function radarReason(options: {
   trend: "steigend" | "stabil" | "fallend";
-  badge: RadarBadge;
+  fixtureText: FixtureText;
   priceVsForm: "hinkt" | "passt" | "voraus";
+  badge: RadarBadge;
 }): string {
-  return `Form ${options.trend}, Gegner ohne Mapping, Preis ${options.priceVsForm} → ${options.badge}`;
+  return `Form ${options.trend}, ${options.fixtureText}, Preis ${options.priceVsForm} → ${options.badge}`;
 }
 
 export function priceVsForm(form: number | null, price: number): "hinkt" | "passt" | "voraus" {
@@ -73,9 +78,6 @@ export function priceVsForm(form: number | null, price: number): "hinkt" | "pass
   if (divergence <= -15) return "voraus";
   return "passt";
 }
-
-export type FixtureModifier = -1 | 0 | 1;
-export type FixtureText = "günstige Gegner" | "gemischte Gegner" | "schwere Gegner" | "Gegner unbekannt";
 
 export function fixtureModifier(opponentPercentiles: number[]): FixtureModifier {
   if (opponentPercentiles.length === 0) return 0;

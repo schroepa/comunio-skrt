@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixtureModifier, fixtureText, formScore, priceScore, radarBadge } from "../../src/lib/scores";
+import { fixtureModifier, fixtureText, formScore, priceScore, radarBadge, radarReason } from "../../src/lib/scores";
 
 describe("formScore", () => {
   it("returns null without notes", () => {
@@ -19,6 +19,24 @@ describe("radarBadge", () => {
 
   it("marks strong outsiders as buy", () => {
     expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok" })).toBe("Kaufen");
+  });
+
+  it("downgrades buy to watch on hard fixtures", () => {
+    expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok", modifier: -1 })).toBe("Beobachten");
+    expect(radarBadge({ inSquad: false, form: 80, price: 40, gate: "ok", modifier: 0 })).toBe("Kaufen");
+  });
+});
+
+describe("radarReason", () => {
+  it("names the fixture bucket and never claims mapping is missing", () => {
+    const text = radarReason({
+      trend: "steigend",
+      fixtureText: "günstige Gegner",
+      priceVsForm: "hinkt",
+      badge: "Kaufen",
+    });
+    expect(text).toBe("Form steigend, günstige Gegner, Preis hinkt → Kaufen");
+    expect(text).not.toMatch(/ohne Mapping/);
   });
 });
 
