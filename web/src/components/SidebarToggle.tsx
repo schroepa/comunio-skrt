@@ -13,21 +13,26 @@ export default function SidebarToggle() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const sync = () => setOpen(isSidebarOpen(document.documentElement));
+    const root = document.documentElement;
+    const sync = () => setOpen(isSidebarOpen(root));
     const onLoad = () => {
       closeSidebar();
       sync();
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isSidebarOpen(document.documentElement)) {
+      if (event.key === "Escape" && isSidebarOpen(root)) {
         closeSidebar();
         sync();
         document.getElementById("sidebar-toggle")?.focus();
       }
     };
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-sidebar-open"] });
+    sync();
     document.addEventListener("astro:page-load", onLoad);
     document.addEventListener("keydown", onKey);
     return () => {
+      observer.disconnect();
       document.removeEventListener("astro:page-load", onLoad);
       document.removeEventListener("keydown", onKey);
     };
