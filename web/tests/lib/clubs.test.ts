@@ -9,7 +9,7 @@ const groups = [
   ["Borussia Mönchengladbach", "Borussia M'gladbach"],
   ["1. FC Union Berlin", "1.FC Union Berlin", "Union Berlin"],
   ["1. FSV Mainz 05", "1.FSV Mainz 05", "Mainz 05"],
-  ["1. FC Heidenheim", "1. FC Heidenheim 1846"],
+  ["1. FC Heidenheim", "1. FC Heidenheim 1846", "1.FC Heidenheim 1846"],
   ["1. FC Köln", "1.FC Köln"],
   ["SC Freiburg", "Sport-Club Freiburg"],
   ["VfL Bochum", "VfL Bochum 1848"],

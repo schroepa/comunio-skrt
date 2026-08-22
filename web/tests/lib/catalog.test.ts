@@ -61,7 +61,7 @@ describe("radarRows", () => {
     const row = rows.find((item) => item.player.id === 1);
     expect(row?.opponents).toBe("1899 Hoffenheim");
     expect(row?.reason).not.toMatch(/ohne Mapping/);
-    expect(row?.reason).toMatch(/Gegner/);
+    expect(row?.reason).toContain("günstige Gegner");
   });
 });
 

@@ -46,6 +46,10 @@ describe("fixtureModifier", () => {
     expect(fixtureModifier([20])).toBe(1);
     expect(fixtureModifier([50])).toBe(0);
     expect(fixtureModifier([80])).toBe(-1);
+    expect(fixtureModifier([100 / 3])).toBe(0);
+    expect(fixtureModifier([200 / 3])).toBe(0);
+    expect(fixtureModifier([20, 20, 80])).toBe(0);
+    expect(fixtureModifier([10, 10, 10])).toBe(1);
   });
 });
 
