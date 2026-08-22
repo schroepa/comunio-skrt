@@ -1,20 +1,27 @@
 ---
 import { Badge } from "./ui/badge";
 import FormBars from "./FormBars.astro";
-import type { RadarRow } from "../lib/catalog";
+import type { PlayerRecord } from "../lib/directus";
 import { positionChip } from "../lib/radar-view";
 
-type Props = { row: RadarRow };
+type Props = {
+  player: PlayerRecord;
+  notes?: number[];
+  form?: number | null;
+  inSquad?: boolean;
+  badge?: string;
+  detail?: string;
+};
 
-const { row } = Astro.props;
-const chip = positionChip(row.player.position);
+const { player, notes = [], form = null, inSquad = false, badge, detail } = Astro.props;
+const chip = positionChip(player.position);
 
 const badgeClass: Record<string, string> = {
-  Kaufen: "bg-emerald-500/20 text-emerald-200",
-  Verkaufen: "bg-destructive/20 text-destructive",
+  Kaufen: "bg-primary/15 text-primary",
+  Verkaufen: "bg-destructive/15 text-destructive",
   Halten: "bg-muted text-muted-foreground",
-  Beobachten: "bg-amber-500/20 text-amber-200",
-  "Nicht verfügbar": "bg-destructive/20 text-destructive",
+  Beobachten: "bg-warning/20 text-warning-foreground",
+  "Nicht verfügbar": "bg-destructive/15 text-destructive",
   "Kein Signal": "bg-muted/50 text-muted-foreground",
 };
 ---
@@ -25,29 +32,28 @@ const badgeClass: Record<string, string> = {
     </span>
     <div class="min-w-0">
       <p class="truncate font-medium">
-        {row.player.name}
-        {row.inSquad ? <span class="ml-2 text-xs font-normal text-muted-foreground">Kader</span> : null}
+        {player.name}
+        {inSquad ? <span class="ml-2 text-xs font-normal text-muted-foreground">Kader</span> : null}
       </p>
       <p class="truncate text-sm text-muted-foreground">
-        {row.player.verein} · {row.market.toLocaleString("de-DE")} €
+        {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €
       </p>
-      <p class="mt-1 truncate text-xs text-muted-foreground" title={row.reason}>
-        {row.opponents}
-      </p>
+      {detail ? <p class="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
     </div>
   </div>
   <div class="flex flex-wrap items-center gap-3 sm:justify-end">
     <div class="text-right">
       <p class="text-[11px] text-muted-foreground">Form</p>
-      {row.notes.length === 0 ? (
+      {notes.length === 0 ? (
         <p class="text-sm tabular-nums text-muted-foreground">—</p>
       ) : (
         <div class="flex items-end gap-2">
-          <FormBars notes={row.notes} />
-          <span class="text-sm tabular-nums">{row.form == null ? "—" : Math.round(row.form)}</span>
+          <FormBars notes={notes} />
+          <span class="text-sm tabular-nums">{form == null ? "—" : Math.round(form)}</span>
         </div>
       )}
     </div>
-    <Badge className={badgeClass[row.badge]}>{row.badge}</Badge>
+    {badge ? <Badge className={badgeClass[badge] ?? "bg-muted text-muted-foreground"}>{badge}</Badge> : null}
+    <slot />
   </div>
 </article>

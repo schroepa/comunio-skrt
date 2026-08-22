@@ -1,15 +1,20 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
+import { notesFor } from "../lib/catalog";
 import {
   addToSquad,
   getManagerProfile,
   listPlayers,
+  listRatings,
   listSquad,
   removeFromSquad,
   saveBudget,
 } from "../lib/directus";
 import { filterPlayers, hasPlayerFilters, parsePlayerFilters, SEARCH_RESULT_LIMIT, uniqueClubs } from "../lib/players";
+import { formScore } from "../lib/scores";
 import Shell from "../layouts/Shell.astro";
 
 const { user, accessToken, supabaseUrl, supabaseAnonKey } = Astro.locals;
@@ -47,13 +52,14 @@ if (Astro.request.method === "POST") {
       profileId: profile?.id,
     });
   }
-  return Astro.redirect("/kader");
+  return Astro.redirect(`${Astro.url.pathname}${Astro.url.search}`);
 }
 
-const [squad, players, profile] = await Promise.all([
+const [squad, players, profile, ratings] = await Promise.all([
   listSquad({ ...db, userId: user.id }),
   listPlayers(db),
   getManagerProfile({ ...db, userId: user.id }),
+  listRatings(db),
 ]);
 const clubs = uniqueClubs(players);
 const matched = hasPlayerFilters(filters) ? filterPlayers(players, filters) : [];
@@ -71,7 +77,7 @@ const inSquad = new Set(squad.map((row) => row.player_id));
 const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
 ---
 <Shell title="Mein Kader" userEmail={user.email}>
-  <h1 class="font-[Syne] text-3xl">Mein Kader</h1>
+  <PageHeader title="Mein Kader" lead="Spieler eintragen und Budget pflegen — so wie in Comunio." />
 
   <form method="post" class="flex flex-wrap items-end gap-3">
     <input type="hidden" name="action" value="budget" />
@@ -79,11 +85,11 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
       Budget (Comunio)
       <input class="mt-1 block rounded-md border border-border bg-card px-3 py-2" type="number" name="budget" min="0" value={profile?.budget ?? ""} />
     </label>
-    <button class="rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Speichern</button>
+    <button class="min-h-11 rounded-md bg-secondary px-3 py-2 text-sm" type="submit">Budget speichern</button>
   </form>
 
   {squadPlayers.length === 0 ? (
-    <EmptyState body="Noch keine Kadereingabe. Spieler über die Suche hinzufügen." />
+    <EmptyState title="Noch leer" body="Suche unten nach Spielern und nimm sie in den Kader." />
   ) : (
     <div class="space-y-6">
       {positions.map((position) => {
@@ -91,21 +97,27 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
         if (group.length === 0) return null;
         return (
           <section>
-            <h2 class="font-[Syne] text-xl">{position}</h2>
-            <ul class="mt-2 divide-y divide-border">
-              {group.map((player) => (
-                <li class="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span>
-                    {player.name}
-                    <span class="ml-2 text-muted-foreground">{player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
-                  </span>
-                  <form method="post">
-                    <input type="hidden" name="action" value="remove" />
-                    <input type="hidden" name="membership_id" value={player.membershipId} />
-                    <button class="text-destructive underline" type="submit">Entfernen</button>
-                  </form>
-                </li>
-              ))}
+            <h2 class="text-xl font-semibold">{position}</h2>
+            <ul class="mt-2">
+              {group.map((player) => {
+                const notes = notesFor(player.id, ratings);
+                return (
+                  <li>
+                    <PlayerCatalogRow
+                      player={player}
+                      notes={notes}
+                      form={formScore(notes)}
+                      inSquad
+                    >
+                      <form method="post" onsubmit="return confirm('Diesen Spieler aus dem Kader nehmen?');">
+                        <input type="hidden" name="action" value="remove" />
+                        <input type="hidden" name="membership_id" value={player.membershipId} />
+                        <button class="min-h-11 text-destructive underline" type="submit">Entfernen</button>
+                      </form>
+                    </PlayerCatalogRow>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         );
@@ -114,7 +126,7 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
   )}
 
   <section class="space-y-3">
-    <h2 class="font-[Syne] text-xl">Spieler suchen</h2>
+    <h2 class="text-xl font-semibold">Spieler suchen</h2>
     <p class="text-sm text-muted-foreground">Name, Position, Verein und Marktwert lassen sich kombinieren.</p>
     <PlayerSearchForm filters={filters} clubs={clubs} />
     {hasPlayerFilters(filters) && searchHits.length === 0 ? (
@@ -126,22 +138,26 @@ const positions = ["Torwart", "Abwehr", "Mittelfeld", "Sturm"] as const;
         {hiddenHits > 0 ? ` · erste ${SEARCH_RESULT_LIMIT} angezeigt` : ""}
       </p>
     ) : null}
-    <ul class="divide-y divide-border">
-      {searchHits.map((player) => (
-        <li class="flex items-center justify-between gap-3 py-2 text-sm">
-          <span>
-            {player.name}
-            <span class="ml-2 text-muted-foreground">{player.position} · {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
-          </span>
-          <form method="post">
-            <input type="hidden" name="action" value="add" />
-            <input type="hidden" name="player_id" value={player.id} />
-            <button class="underline" type="submit" disabled={inSquad.has(player.id)}>
-              {inSquad.has(player.id) ? "Im Kader" : "In den Kader"}
-            </button>
-          </form>
-        </li>
-      ))}
-    </ul>
+    <div>
+      {searchHits.map((player) => {
+        const notes = notesFor(player.id, ratings);
+        return (
+          <PlayerCatalogRow
+            player={player}
+            notes={notes}
+            form={formScore(notes)}
+            inSquad={inSquad.has(player.id)}
+          >
+            <form method="post">
+              <input type="hidden" name="action" value="add" />
+              <input type="hidden" name="player_id" value={player.id} />
+              <button class="min-h-11 text-link disabled:text-muted-foreground disabled:no-underline" type="submit" disabled={inSquad.has(player.id)}>
+                {inSquad.has(player.id) ? "Bereits im Kader" : "In den Kader"}
+              </button>
+            </form>
+          </PlayerCatalogRow>
+        );
+      })}
+    </div>
   </section>
 </Shell>

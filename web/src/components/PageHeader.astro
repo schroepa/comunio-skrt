@@ -1,0 +1,11 @@
+---
+interface Props {
+  title: string;
+  lead?: string;
+}
+const { title, lead } = Astro.props;
+---
+<header class="space-y-2">
+  <h1 class="text-3xl font-semibold tracking-tight">{title}</h1>
+  {lead ? <p class="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">{lead}</p> : null}
+</header>

@@ -1,5 +1,7 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import PageHeader from "../components/PageHeader.astro";
+import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
 import { formScore } from "../lib/scores";
 import { notesFor } from "../lib/catalog";
@@ -39,7 +41,10 @@ if (Astro.request.method === "POST") {
   if (action === "remove") {
     await removeCompetitor({ ...db, id: Number(form.get("id")) });
   }
-  return Astro.redirect("/konkurrenz");
+  const nextRival = String(form.get("competitor_name") ?? rival).trim();
+  const next = new URL("/konkurrenz", Astro.url);
+  if (nextRival) next.searchParams.set("rival", nextRival);
+  return Astro.redirect(`${next.pathname}${next.search}`);
 }
 
 const [players, squad, ratings, rivals] = await Promise.all([
@@ -70,22 +75,35 @@ for (const row of rivals) {
 }
 ---
 <Shell title="Konkurrenz" userEmail={user.email}>
-  <h1 class="font-[Syne] text-3xl">Konkurrenz</h1>
-  <p class="text-sm text-muted-foreground">
-    2–3 Rivalen aus deiner Comunio-Liga — nicht die App-Freunde.
-  </p>
+  <PageHeader title="Konkurrenz" lead="Form von 2–3 Liga-Rivalen neben deinem Kader. Nicht die anderen App-Nutzer — nur Gegner aus deiner Comunio-Liga." />
 
   {groups.size === 0 ? (
-    <EmptyState body="Noch keine Rivalen. Trage 2–3 Kader aus deiner Comunio-Liga ein — nicht die App-Freunde." />
+    <EmptyState title="Noch keine Rivalen" body="Trage unten einen Rivalen-Namen ein, suche Spieler und ordne sie zu." />
   ) : (
     <div class="grid gap-4 md:grid-cols-2">
       <section class="rounded-lg border border-border p-4">
-        <h2 class="font-[Syne] text-xl">Mein Kader</h2>
-        <p class="text-sm text-muted-foreground">Form {meanForm(squad.map((row) => row.player_id))}</p>
+        <h2 class="text-xl font-semibold">Mein Kader</h2>
+        <p class="text-sm text-muted-foreground">
+          {squad.length} Spieler · Form {meanForm(squad.map((row) => row.player_id))}
+        </p>
+        {squad.length === 0 ? (
+          <p class="mt-2 text-sm text-muted-foreground">
+            Noch leer. <a class="text-link" href="/kader">Spieler eintragen</a>
+          </p>
+        ) : (
+          <ul class="mt-2 space-y-1 text-sm">
+            {squad.slice(0, 8).map((row) => (
+              <li>{byId.get(row.player_id)?.name ?? `Spieler ${row.player_id}`}</li>
+            ))}
+          </ul>
+        )}
+        {squad.length > 8 ? (
+          <p class="mt-1 text-xs text-muted-foreground">+{squad.length - 8} weitere</p>
+        ) : null}
       </section>
       {[...groups.entries()].map(([name, rows]) => (
         <section class="rounded-lg border border-border p-4">
-          <h2 class="font-[Syne] text-xl">{name}</h2>
+          <h2 class="text-xl font-semibold">{name}</h2>
           <p class="text-sm text-muted-foreground">
             {rows.length} Spieler · Form {meanForm(rows.map((row) => row.player_id))}
           </p>
@@ -93,10 +111,11 @@ for (const row of rivals) {
             {rows.map((row) => (
               <li class="flex justify-between gap-2">
                 <span>{byId.get(row.player_id)?.name ?? `Spieler ${row.player_id}`}</span>
-                <form method="post">
+                <form method="post" onsubmit="return confirm('Spieler von diesem Rivalen entfernen?');">
                   <input type="hidden" name="action" value="remove" />
                   <input type="hidden" name="id" value={row.id} />
-                  <button class="text-destructive underline" type="submit">Entfernen</button>
+                  <input type="hidden" name="competitor_name" value={name} />
+                  <button class="min-h-11 text-destructive underline" type="submit">Entfernen</button>
                 </form>
               </li>
             ))}
@@ -107,26 +126,36 @@ for (const row of rivals) {
   )}
 
   <section class="space-y-3">
-    <h2 class="font-[Syne] text-xl">Spieler einem Rivalen zuordnen</h2>
+    <h2 class="text-xl font-semibold">Spieler einem Rivalen zuordnen</h2>
+    <p class="text-sm text-muted-foreground">Zuerst den Rivalen-Namen eintragen, dann Spieler suchen und zuordnen.</p>
     <PlayerSearchForm filters={filters} clubs={clubs} rival={rival} />
+    {!rival.trim() && hasPlayerFilters(filters) ? (
+      <p class="text-sm text-muted-foreground" role="status">Rivalen-Namen oben eintragen und erneut filtern, damit du Spieler zuordnen kannst.</p>
+    ) : null}
     {hasPlayerFilters(filters) && searchHits.length === 0 ? (
       <p class="text-sm text-muted-foreground">Kein Treffer. Filter lockern.</p>
     ) : null}
-    <ul class="divide-y divide-border">
-      {searchHits.map((player) => (
-        <li class="flex items-center justify-between gap-3 py-2 text-sm">
-          <span>
-            {player.name}
-            <span class="ml-2 text-muted-foreground">{player.position} · {player.verein} · {player.aktueller_marktwert.toLocaleString("de-DE")} €</span>
-          </span>
-          <form method="post">
-            <input type="hidden" name="action" value="add" />
-            <input type="hidden" name="competitor_name" value={rival} />
-            <input type="hidden" name="player_id" value={player.id} />
-            <button class="underline" type="submit" disabled={!rival.trim()}>Hinzufügen</button>
-          </form>
-        </li>
-      ))}
-    </ul>
+    <div>
+      {searchHits.map((player) => {
+        const notes = notesFor(player.id, ratings);
+        return (
+          <PlayerCatalogRow player={player} notes={notes} form={formScore(notes)}>
+            <form method="post">
+              <input type="hidden" name="action" value="add" />
+              <input type="hidden" name="competitor_name" value={rival} />
+              <input type="hidden" name="player_id" value={player.id} />
+              <button
+                class="min-h-11 text-link disabled:text-muted-foreground disabled:no-underline"
+                type="submit"
+                disabled={!rival.trim()}
+                title={!rival.trim() ? "Zuerst Rivalen-Namen eintragen und filtern" : undefined}
+              >
+                {rival.trim() ? `Zu ${rival} hinzufügen` : "Rivalen-Namen fehlt"}
+              </button>
+            </form>
+          </PlayerCatalogRow>
+        );
+      })}
+    </div>
   </section>
 </Shell>

@@ -24,7 +24,9 @@ const resetHref = Astro.props.resetHref ?? action;
           value={rival}
           required
           autocomplete="off"
+          placeholder="z. B. Stefan"
         />
+        <span class="mt-1 block text-xs text-muted-foreground">Bleibt beim Filtern erhalten und steuert, wem du Spieler zuordnest.</span>
       </label>
     ) : null
   }

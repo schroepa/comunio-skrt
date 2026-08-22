@@ -1,11 +1,12 @@
 ---
 import EmptyState from "../components/EmptyState.astro";
+import PageHeader from "../components/PageHeader.astro";
 import PlayerCatalogRow from "../components/PlayerCatalogRow.astro";
 import PlayerSearchForm from "../components/PlayerSearchForm.astro";
 import { radarRows } from "../lib/catalog";
 import { listAvailability, listFixtures, listPlayers, listRatings, listSquad } from "../lib/directus";
 import { getNextMatchday } from "../lib/fixtures";
-import { filterPlayers, parsePlayerFilters, uniqueClubs } from "../lib/players";
+import { filterPlayers, hasPlayerFilters, parsePlayerFilters, uniqueClubs } from "../lib/players";
 import { parseRadarSort, RADAR_SORTS, sortRadarRows } from "../lib/radar-view";
 import Shell from "../layouts/Shell.astro";
 
@@ -38,8 +39,7 @@ const rows = sortRadarRows(
 );
 ---
 <Shell title="Spieler-Radar" userEmail={user.email}>
-  <h1 class="font-[Syne] text-3xl">Spieler-Radar</h1>
-  <p class="text-sm text-muted-foreground">Katalog der Liga. Filter und Sortierung kombinieren.</p>
+  <PageHeader title="Spieler-Radar" lead="Katalog der Liga: Form gegen Marktwert. Form ist 0–100 aus den letzten Noten." />
 
   <PlayerSearchForm filters={filters} clubs={clubs} action="/radar" resetHref="/radar">
     <div class="flex flex-wrap items-end gap-3">
@@ -59,13 +59,22 @@ const rows = sortRadarRows(
   </PlayerSearchForm>
 
   {rows.length === 0 ? (
-    <EmptyState body="Noch keine Spielerdaten." />
+    <EmptyState
+      body={hasPlayerFilters(filters) || onlySquad ? "Keine Treffer für diese Filter. Filter lockern." : "Noch keine Spielerdaten."}
+    />
   ) : (
     <div class="mt-2">
       <p class="mb-2 text-sm text-muted-foreground">{rows.length.toLocaleString("de-DE")} Spieler</p>
       <div>
         {rows.map((row) => (
-          <PlayerCatalogRow row={row} />
+          <PlayerCatalogRow
+            player={row.player}
+            notes={row.notes}
+            form={row.form}
+            inSquad={row.inSquad}
+            badge={row.badge}
+            detail={`${row.reason}${row.opponents !== "—" ? ` · ${row.opponents}` : ""}`}
+          />
         ))}
       </div>
     </div>
